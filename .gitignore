@@ -1,0 +1,24 @@
+# Secret keys - NEVER commit these
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# VS Code
+.vscode/
+.idea/
+
+# Reports output
+reports/
+
+# Mac files
+.DS_Store
+
+# Logs
+*.log
+output.log

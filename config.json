@@ -1,0 +1,28 @@
+{
+  "benchling": {
+    "base_url": "https://excelra.benchling.com/api/v2",
+    "entry_endpoint": "/entries",
+    "dna_sequence_endpoint": "/dna-sequences",
+    "custom_entity_endpoint": "/custom-entities",
+    "parent_folder_id": "lib_Wi1jEfMSMK",
+    "api_key_env_var": "sk_oK50IgOG4fZRn1m5K6BcGifkMofQK",
+    "timeout_seconds": 30
+  },
+  "excel": {
+    "mapping_workbook": "CRO Mapping.xlsx",
+    "data_workbook": "Harmonized dataset_new.xlsx",
+    "entry_sheet_name": "Entry",
+    "dna_sheet_name": "DNA Sequence",
+    "custom_sheet_name": "Sample",
+    "results_sheet_name": "Results",
+    "location_sheet_name": "Location",
+    "box_sheet_name": "Box",
+    "container_sheet_name": "Container"
+  },
+  "templates": {
+    "entry_template": "entry_template.json",
+    "dna_template": "entity_template.json",
+    "custom_template": "sample_template.json",
+    "result_template": "result_template.json"
+  }
+}

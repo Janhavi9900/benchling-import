@@ -1,3 +1,5 @@
+# benchling-import
+Benchling data ingestion pipeline with Claude AI
 # Benchling Data Importer
 
 This project provides a Python-based importer for uploading data to Benchling, including entries, DNA sequences, custom entities (samples), and assay results. It automatically creates folders based on the "CRO-Name" field from the input data and creates one entry per CRO in the respective folder.

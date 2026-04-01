@@ -1,0 +1,48 @@
+{
+  "Sample": [
+    {
+      "benchling_field": "name",
+      "suggested_column": "Sample_Name",
+      "confidence": 99,
+      "reason": "Confirmed: Sample name \u2192 Sample_Name"
+    }
+  ],
+  "DNA Sequence": [
+    {
+      "benchling_field": "bases",
+      "suggested_column": "Sequence",
+      "confidence": 97,
+      "reason": "'bases' is DNA sequence data \u2014 exact match"
+    },
+    {
+      "benchling_field": "name",
+      "suggested_column": "Construct_Name",
+      "confidence": 99,
+      "reason": "Confirmed: DNA Sequence name \u2192 Construct_Name"
+    }
+  ],
+  "Location": [
+    {
+      "benchling_field": "name",
+      "suggested_column": "Storage_Location",
+      "confidence": 99,
+      "reason": "Confirmed: Location name \u2192 Storage_Location"
+    }
+  ],
+  "Box": [
+    {
+      "benchling_field": "name",
+      "suggested_column": "Box",
+      "confidence": 99,
+      "reason": "Confirmed: Box name \u2192 Box column"
+    }
+  ],
+  "Container": [
+    {
+      "benchling_field": "Container",
+      "suggested_column": null,
+      "confidence": 0,
+      "reason": "No matching column found \u2014 manual review needed"
+    }
+  ]
+}

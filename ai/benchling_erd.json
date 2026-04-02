@@ -1,0 +1,2670 @@
+{
+  "tenant": "excelra.benchling.com",
+  "generated_at": "2026-04-02T12:49:25.943223",
+  "schema_count": 54,
+  "schemas": [
+    {
+      "id": "ts_ttjClSd9",
+      "name": "Cell Line",
+      "type": "Custom Entity",
+      "prefix": "cl",
+      "field_count": 6,
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_SJbJKCHE"
+        },
+        {
+          "name": "cell_type",
+          "type": "dropdown",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_ByYPSRPQ"
+        },
+        {
+          "name": "origin",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_gvyLZdL7"
+        },
+        {
+          "name": "passage_number",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Kl4sUnxy"
+        },
+        {
+          "name": "date_created",
+          "type": "date",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_hH4pYRsF"
+        },
+        {
+          "name": "status",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_GQT2RDBg"
+        }
+      ],
+      "required_fields": [
+        "name",
+        "cell_type"
+      ],
+      "all_fields": [
+        "name",
+        "cell_type",
+        "origin",
+        "passage_number",
+        "date_created",
+        "status"
+      ]
+    },
+    {
+      "id": "ts_LaVZAtSx",
+      "name": "Plasma Id",
+      "type": "Custom Entity",
+      "prefix": "pl",
+      "field_count": 6,
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_JvECHhAz"
+        },
+        {
+          "name": "backbone",
+          "type": "dropdown",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_qRsbXW5q"
+        },
+        {
+          "name": "insert_gene",
+          "type": "text",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_QYe4GVMt"
+        },
+        {
+          "name": "antibiotic",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Vsyn8YJy"
+        },
+        {
+          "name": "sequence",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_2lz0gHa8"
+        },
+        {
+          "name": "status",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_MReH0Vch"
+        }
+      ],
+      "required_fields": [
+        "name",
+        "backbone",
+        "insert_gene"
+      ],
+      "all_fields": [
+        "name",
+        "backbone",
+        "insert_gene",
+        "antibiotic",
+        "sequence",
+        "status"
+      ]
+    },
+    {
+      "id": "ts_JB4gsaH8D4",
+      "name": "DNA_Sequence_POC",
+      "type": "Custom Entity",
+      "prefix": "Test",
+      "field_count": 8,
+      "fields": [
+        {
+          "name": "CRO",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_PUu3pHyKUj"
+        },
+        {
+          "name": "Internal_sample_ID",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Z7Lp57QRXV"
+        },
+        {
+          "name": "External_Specimen_ID",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_zs9y6jXqKh"
+        },
+        {
+          "name": "Host_System",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_uDZgt8eGvs"
+        },
+        {
+          "name": "Vector",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_FDtEvRxN7M"
+        },
+        {
+          "name": "Construct_Name",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Xk7551t1hS"
+        },
+        {
+          "name": "GC_Content",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_7zrx4IEakI"
+        },
+        {
+          "name": "Sequence_Length",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_RD3HyG0c74"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "CRO",
+        "Internal_sample_ID",
+        "External_Specimen_ID",
+        "Host_System",
+        "Vector",
+        "Construct_Name",
+        "GC_Content",
+        "Sequence_Length"
+      ]
+    },
+    {
+      "id": "ts_2hRf5zJaNT",
+      "name": "Program / Project ID",
+      "type": "Custom Entity",
+      "prefix": "PRG",
+      "field_count": 7,
+      "fields": [
+        {
+          "name": "Program / Project ID",
+          "type": "text",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_lb2CAkmI5f"
+        },
+        {
+          "name": "Program Name",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_LRptyr1TaV"
+        },
+        {
+          "name": "Program Status",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_KxNrXvnWyf"
+        },
+        {
+          "name": "Research Category",
+          "type": "dropdown",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_3CRxWvNzZC"
+        },
+        {
+          "name": "Disease Name",
+          "type": "entity_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_AYjlYe2YuT"
+        },
+        {
+          "name": "Leader / Owner",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_BxFZkDpRYe"
+        },
+        {
+          "name": "Department Affiliation",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_jHQ8174zZS"
+        }
+      ],
+      "required_fields": [
+        "Program / Project ID",
+        "Research Category"
+      ],
+      "all_fields": [
+        "Program / Project ID",
+        "Program Name",
+        "Program Status",
+        "Research Category",
+        "Disease Name",
+        "Leader / Owner",
+        "Department Affiliation"
+      ]
+    },
+    {
+      "id": "ts_xirY0O2kGU",
+      "name": "Disease",
+      "type": "Custom Entity",
+      "prefix": "DIS",
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "Disease Name",
+          "type": "text",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_ItHzeiKsQc"
+        },
+        {
+          "name": "Disease Ontology ID",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_WpBCUF0Zp5"
+        },
+        {
+          "name": "Disease Ontology Term",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_qheoA59Gh3"
+        }
+      ],
+      "required_fields": [
+        "Disease Name"
+      ],
+      "all_fields": [
+        "Disease Name",
+        "Disease Ontology ID",
+        "Disease Ontology Term"
+      ]
+    },
+    {
+      "id": "ts_jzUeLlVzmY",
+      "name": "Experiment Information",
+      "type": "Custom Entity",
+      "prefix": "SNG-EXP",
+      "field_count": 7,
+      "fields": [
+        {
+          "name": "Experiment Program ID",
+          "type": "entity_link",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_SPTwzxJ5oF"
+        },
+        {
+          "name": "Effort Tracking ID",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_b4Px8G6qLY"
+        },
+        {
+          "name": "Target Gene Symbol",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_WAWOrA147d"
+        },
+        {
+          "name": "ELNB or LIMS #",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_GTCnApsD17"
+        },
+        {
+          "name": "Compliance - Aliance collaboration",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_YbkCvLyJTP"
+        },
+        {
+          "name": "Compliance - Biological Material & Tech License",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_PM3uo7ezKt"
+        },
+        {
+          "name": "Compliance - HBS disclaimer",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Wb5nrPoMPM"
+        }
+      ],
+      "required_fields": [
+        "Experiment Program ID"
+      ],
+      "all_fields": [
+        "Experiment Program ID",
+        "Effort Tracking ID",
+        "Target Gene Symbol",
+        "ELNB or LIMS #",
+        "Compliance - Aliance collaboration",
+        "Compliance - Biological Material & Tech License",
+        "Compliance - HBS disclaimer"
+      ]
+    },
+    {
+      "id": "ts_t3opdZ4B3r",
+      "name": "Request Information",
+      "type": "Custom Entity",
+      "prefix": "SNG-REQ",
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "Experiment ID",
+          "type": "entity_link",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_dg9gGgGaVY"
+        },
+        {
+          "name": "Request Type",
+          "type": "dropdown",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_9TGj1ilbcY"
+        },
+        {
+          "name": "Subprocess",
+          "type": "dropdown",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_D6THpgXSOW"
+        },
+        {
+          "name": "Rationale",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_36RYvWLW1M"
+        },
+        {
+          "name": "Workflow Type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_7w7ZTEHQbU"
+        }
+      ],
+      "required_fields": [
+        "Experiment ID",
+        "Request Type",
+        "Subprocess"
+      ],
+      "all_fields": [
+        "Experiment ID",
+        "Request Type",
+        "Subprocess",
+        "Rationale",
+        "Workflow Type"
+      ]
+    },
+    {
+      "id": "ts_R8DsPJ0X1S",
+      "name": "Sample Information",
+      "type": "Custom Entity",
+      "prefix": "SNGR-SMPL",
+      "field_count": 8,
+      "fields": [
+        {
+          "name": "Request ID",
+          "type": "entity_link",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_bwk7AYGUCH"
+        },
+        {
+          "name": "Sample Type",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_DKNSeBrmBZ"
+        },
+        {
+          "name": "Sample Name",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_aylFaU2fy3"
+        },
+        {
+          "name": "Sample ID",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_GwZO8nAXrs"
+        },
+        {
+          "name": "Primer Name",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_082gJwjatI"
+        },
+        {
+          "name": "Primer Supply Type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_inSnMqCIMI"
+        },
+        {
+          "name": "Volume (\u00b5L)",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_pH16jvSv5b"
+        },
+        {
+          "name": "System Generated Sample ID",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_OMeOot0QF2"
+        }
+      ],
+      "required_fields": [
+        "Request ID"
+      ],
+      "all_fields": [
+        "Request ID",
+        "Sample Type",
+        "Sample Name",
+        "Sample ID",
+        "Primer Name",
+        "Primer Supply Type",
+        "Volume (\u00b5L)",
+        "System Generated Sample ID"
+      ]
+    },
+    {
+      "id": "ts_NM4LsU0j10",
+      "name": "Test Clinical Pharma",
+      "type": "Custom Entity",
+      "prefix": "SS",
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "Accession Number",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_A4m5Z6KdYF"
+        },
+        {
+          "name": "Cell Type",
+          "type": "dropdown",
+          "required": true,
+          "archived": false,
+          "is_multi": true,
+          "field_id": "tsf_x5aki7gcGW"
+        },
+        {
+          "name": "Submitted?",
+          "type": "dropdown",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_8M5tagkMdh"
+        }
+      ],
+      "required_fields": [
+        "Cell Type",
+        "Submitted?"
+      ],
+      "all_fields": [
+        "Accession Number",
+        "Cell Type",
+        "Submitted?"
+      ]
+    },
+    {
+      "id": "ts_Xy4wTRyrb3",
+      "name": "JT clinical data",
+      "type": "Custom Entity",
+      "prefix": "Janhavi",
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "Accession Number",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_TELxk4Sh0n"
+        },
+        {
+          "name": "Cell Line",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_DAWGmJ8QUE"
+        },
+        {
+          "name": "PDF",
+          "type": "blob_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_tVCnB3vjkB"
+        },
+        {
+          "name": "Custom DP",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Eag8LCY5jX"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "Accession Number",
+        "Cell Line",
+        "PDF",
+        "Custom DP"
+      ]
+    },
+    {
+      "id": "ts_S1elsG86OQ",
+      "name": "PK Schema",
+      "type": "Custom Entity",
+      "prefix": "RV",
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "Accession Number",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_F92mBpkPcf"
+        },
+        {
+          "name": "Cell Type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_KxjFavU7Ho"
+        },
+        {
+          "name": "Submitted",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_8fiNOqt49v"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "Accession Number",
+        "Cell Type",
+        "Submitted"
+      ]
+    },
+    {
+      "id": "ts_KEywsmjNQ8",
+      "name": "TestClinical_Pharma",
+      "type": "Custom Entity",
+      "prefix": "TK",
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "Accession Number",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_kJ8YP1mkXk"
+        },
+        {
+          "name": "Cell Type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_aMDpCJdOwu"
+        },
+        {
+          "name": "Submitted Status",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_uZLXbFUQft"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "Accession Number",
+        "Cell Type",
+        "Submitted Status"
+      ]
+    },
+    {
+      "id": "ts_PIhKTUMKoG",
+      "name": "Test ClinPharm",
+      "type": "Custom Entity",
+      "prefix": "HD",
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "Accension Number",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Y7B2t0O7Sj"
+        },
+        {
+          "name": "Cell type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_9pZdezdkHu"
+        },
+        {
+          "name": "Submitted",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_NijE65ZPGs"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "Accension Number",
+        "Cell type",
+        "Submitted"
+      ]
+    },
+    {
+      "id": "ts_01fjuYcAN8",
+      "name": "Test Clinical Pharma A",
+      "type": "Custom Entity",
+      "prefix": "DJ",
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "Accession Number",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_TkI5En3Tmr"
+        },
+        {
+          "name": "Cell Type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_iWMijCgTZR"
+        },
+        {
+          "name": "Submitted",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_C7bdjaSDp5"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "Accession Number",
+        "Cell Type",
+        "Submitted"
+      ]
+    },
+    {
+      "id": "ts_sqZWSJtNd6",
+      "name": "Test Clinical Pharma JGS",
+      "type": "Custom Entity",
+      "prefix": "JGS",
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "Accession Number",
+          "type": "integer",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_FLn0kb7uP1"
+        },
+        {
+          "name": "Cell Type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_JToUDR1uYg"
+        },
+        {
+          "name": "Submitted",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_oaHZGctTe5"
+        }
+      ],
+      "required_fields": [
+        "Accession Number"
+      ],
+      "all_fields": [
+        "Accession Number",
+        "Cell Type",
+        "Submitted"
+      ]
+    },
+    {
+      "id": "ts_bi9do6KL1Z",
+      "name": "Sample",
+      "type": "Custom Entity",
+      "prefix": "POC",
+      "field_count": 20,
+      "fields": [
+        {
+          "name": "Sample_ID",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Gtd5YIg9HK"
+        },
+        {
+          "name": "Sample_Name",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_CJvTSl4XOq"
+        },
+        {
+          "name": "Program",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_aT8Z86xWCM"
+        },
+        {
+          "name": "Target",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_DrGhfArWS7"
+        },
+        {
+          "name": "Linker_Type",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_vQ8NlDR2AU"
+        },
+        {
+          "name": "DAR",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_LNsbLH3Z1B"
+        },
+        {
+          "name": "Conjugation_Method",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_QJhokomz4W"
+        },
+        {
+          "name": "QC_Status",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_jC11y30GBV"
+        },
+        {
+          "name": "Batch_ID",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_OqgEcjnxBj"
+        },
+        {
+          "name": "Manufacturing_Date",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_RQztyxdqwJ"
+        },
+        {
+          "name": "Expiry_Date",
+          "type": "date",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_9RVg77lUy8"
+        },
+        {
+          "name": "Manufacturer",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_oBrGI1TEJv"
+        },
+        {
+          "name": "Purity_Percent",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_kzQxRdIzXI"
+        },
+        {
+          "name": "Instrument_ID",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_1ru16RgTrh"
+        },
+        {
+          "name": "Instrument_Name",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_FxGyPNY8LY"
+        },
+        {
+          "name": "Instrument_Type",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_SZl7BrZfGe"
+        },
+        {
+          "name": "Manufacturer_Inst",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_xsBwWo0AXl"
+        },
+        {
+          "name": "Model",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_D9QhbvqPYm"
+        },
+        {
+          "name": "Calibration_Date",
+          "type": "date",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_iXa38wvsPP"
+        },
+        {
+          "name": "Entity linked",
+          "type": "dna_sequence_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_IdobACOADx"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "Sample_ID",
+        "Sample_Name",
+        "Program",
+        "Target",
+        "Linker_Type",
+        "DAR",
+        "Conjugation_Method",
+        "QC_Status",
+        "Batch_ID",
+        "Manufacturing_Date",
+        "Expiry_Date",
+        "Manufacturer",
+        "Purity_Percent",
+        "Instrument_ID",
+        "Instrument_Name",
+        "Instrument_Type",
+        "Manufacturer_Inst",
+        "Model",
+        "Calibration_Date",
+        "Entity linked"
+      ]
+    },
+    {
+      "id": "ts_xppTxLwpCu",
+      "name": "Test Clinical Pharma B",
+      "type": "Custom Entity",
+      "prefix": "LM",
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "Accession Number",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_msd3R8g8TM"
+        },
+        {
+          "name": "Cell Type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_PdWjCRDaJY"
+        },
+        {
+          "name": "Submitted",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_LnVIZ3Ah2w"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "Accession Number",
+        "Cell Type",
+        "Submitted"
+      ]
+    },
+    {
+      "id": "ts_cZCLzEIBlo",
+      "name": "LM_Cell Line",
+      "type": "Custom Entity",
+      "prefix": "CL",
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "cell_line_type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_nFd4AshnHZ"
+        },
+        {
+          "name": "passage_number",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_sm5ZkSJXBc"
+        },
+        {
+          "name": "established_date",
+          "type": "date",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_ufGSPOrYCv"
+        },
+        {
+          "name": "is_master_cell_bankM",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_N501TwPUOQ"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "cell_line_type",
+        "passage_number",
+        "established_date",
+        "is_master_cell_bankM"
+      ]
+    },
+    {
+      "id": "ts_8pUt5iBjJB",
+      "name": "SS_Cell Line",
+      "type": "Custom Entity",
+      "prefix": "SSCL",
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "cell_line_type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Y16NAmIOWx"
+        },
+        {
+          "name": "passage_number",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_9DEZoUoUV8"
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_5qo1xbOKMD"
+        },
+        {
+          "name": "established_date",
+          "type": "date",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_XkcHEnJseK"
+        },
+        {
+          "name": "is_master_cell_bank",
+          "type": "boolean",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_JYth8FYXBg"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "cell_line_type",
+        "passage_number",
+        "source",
+        "established_date",
+        "is_master_cell_bank"
+      ]
+    },
+    {
+      "id": "ts_3UEsliIsvW",
+      "name": "JT_CELL_LINE",
+      "type": "Custom Entity",
+      "prefix": "JT_CELL_LINE",
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "cell_line_type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_BOuE0BcZny"
+        },
+        {
+          "name": "passage_number",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_thi1iw1Hrk"
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_M7LmdRXy7A"
+        },
+        {
+          "name": "is_master_cell_bank",
+          "type": "boolean",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_686kk3ytZI"
+        },
+        {
+          "name": "established_date",
+          "type": "date",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_c5Hnmu40AX"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "cell_line_type",
+        "passage_number",
+        "source",
+        "is_master_cell_bank",
+        "established_date"
+      ]
+    },
+    {
+      "id": "ts_UpSZQbYCeG",
+      "name": "Cell lines1",
+      "type": "Custom Entity",
+      "prefix": "TKN",
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "Cell_Line_Type",
+          "type": "entry_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_YtYoVpFVha"
+        },
+        {
+          "name": "Passage_Number",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_c8R2iBQ5wS"
+        },
+        {
+          "name": "Source",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_wk4YzOu1ef"
+        },
+        {
+          "name": "Established _Date",
+          "type": "date",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_8an5VoNYMy"
+        },
+        {
+          "name": "Is_master_Cell_bank",
+          "type": "boolean",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_oF0v53at0a"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "Cell_Line_Type",
+        "Passage_Number",
+        "Source",
+        "Established _Date",
+        "Is_master_Cell_bank"
+      ]
+    },
+    {
+      "id": "ts_stjXXQUUX6",
+      "name": "TK_CELLLINE Name",
+      "type": "Custom Entity",
+      "prefix": "LC",
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "cell_line_type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_mKGZIqrbWH"
+        },
+        {
+          "name": "passage_number",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_hJbhg7eq5P"
+        },
+        {
+          "name": "established_date",
+          "type": "date",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_wFrdh9YsxP"
+        },
+        {
+          "name": "is_master_cell_bankM",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_2IeIsx3Chb"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "cell_line_type",
+        "passage_number",
+        "established_date",
+        "is_master_cell_bankM"
+      ]
+    },
+    {
+      "id": "ts_XeiquSlENh",
+      "name": "HD_Cell_line",
+      "type": "Custom Entity",
+      "prefix": "CL_HD",
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "cell_line_types",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_QtsVwXzURC"
+        },
+        {
+          "name": "passage_number",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_p2l44o8q3K"
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_SGBegCGMOm"
+        },
+        {
+          "name": "established_date",
+          "type": "date",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Aj9K04e2yX"
+        },
+        {
+          "name": "is_master_cell_bank",
+          "type": "boolean",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_cRTdFqje1D"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "cell_line_types",
+        "passage_number",
+        "source",
+        "established_date",
+        "is_master_cell_bank"
+      ]
+    },
+    {
+      "id": "assaysch_v4LVTyc6",
+      "name": "CRO Protein Request",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "study_id",
+          "type": "text",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_I0tyKnlJ"
+        },
+        {
+          "name": "protein_type",
+          "type": "boolean",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_YKsFFArG"
+        },
+        {
+          "name": "species",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_4xW9uGUI"
+        }
+      ],
+      "required_fields": [
+        "study_id"
+      ],
+      "all_fields": [
+        "study_id",
+        "protein_type",
+        "species"
+      ]
+    },
+    {
+      "id": "assaysch_WltFkUFS",
+      "name": "result_schema_j001",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 9,
+      "fields": [
+        {
+          "name": "sample",
+          "type": "text",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_VNP3SKP3"
+        },
+        {
+          "name": "well",
+          "type": "text",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_D2XWFPcB"
+        },
+        {
+          "name": "signal",
+          "type": "float",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_AckryOHt"
+        },
+        {
+          "name": "mean",
+          "type": "float",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_qW2Yl5jU"
+        },
+        {
+          "name": "cv",
+          "type": "float",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_8jpKXSLN"
+        },
+        {
+          "name": "calc_concentration",
+          "type": "float",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_tmYlsXS7"
+        },
+        {
+          "name": "calc_conc_mean",
+          "type": "float",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_8CGhLwWT"
+        },
+        {
+          "name": "calc_conc_cv",
+          "type": "float",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_M70JN9bN"
+        },
+        {
+          "name": "assaysch_tgahsk83",
+          "type": "assay_run_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_yCq7KRMc"
+        }
+      ],
+      "required_fields": [
+        "sample",
+        "well",
+        "signal",
+        "mean",
+        "cv",
+        "calc_concentration",
+        "calc_conc_mean",
+        "calc_conc_cv"
+      ],
+      "all_fields": [
+        "sample",
+        "well",
+        "signal",
+        "mean",
+        "cv",
+        "calc_concentration",
+        "calc_conc_mean",
+        "calc_conc_cv",
+        "assaysch_tgahsk83"
+      ]
+    },
+    {
+      "id": "assaysch_kmucpur2",
+      "name": "test_result_schema",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "no",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_SfBiZrRB"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_beslcg4z"
+        },
+        {
+          "name": "run",
+          "type": "assay_run_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_xtFlHWbw"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "no",
+        "name",
+        "run"
+      ]
+    },
+    {
+      "id": "assaysch_yK1GQHjKcy",
+      "name": "Sanjay_Demo",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 22,
+      "fields": [
+        {
+          "name": "result_ngml",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_MxUUtAwZtO"
+        },
+        {
+          "name": "units",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_gSN5ggxlZE"
+        },
+        {
+          "name": "qualifier",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_JQCAmM9mrw"
+        },
+        {
+          "name": "lloq_ngml",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_22u8NsgVIF"
+        },
+        {
+          "name": "uloq_ngml",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_T0flYWY2yH"
+        },
+        {
+          "name": "method_code",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_HkHAyCt34c"
+        },
+        {
+          "name": "assay_version",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_ItusAGdLvV"
+        },
+        {
+          "name": "run_id",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_tGT7uBL1La"
+        },
+        {
+          "name": "instrument_id",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_LzF9SmjOT4"
+        },
+        {
+          "name": "reported_date",
+          "type": "datetime",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Dw4LhwXHSM"
+        },
+        {
+          "name": "target",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_hzjLo1CLu8"
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_eZa6olbAKZ"
+        },
+        {
+          "name": "ic50_nm",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_mLSETOd9VQ"
+        },
+        {
+          "name": "hill_slope",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_mF3l5LfXDh"
+        },
+        {
+          "name": "r2",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_27UYQUPjqB"
+        },
+        {
+          "name": "qc_flag",
+          "type": "boolean",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_vlJG23idjx"
+        },
+        {
+          "name": "reads",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_i3ogp0w6hG"
+        },
+        {
+          "name": "yield_gbases",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_W1z72Qe1sp"
+        },
+        {
+          "name": "q30",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_XOQqWNRzRs"
+        },
+        {
+          "name": "meanreadlen",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_zCKQEdwNfW"
+        },
+        {
+          "name": "pf_pass",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_sWem4XOt4u"
+        },
+        {
+          "name": "entity_name",
+          "type": "dna_sequence_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_AG2gWrs0jh"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "result_ngml",
+        "units",
+        "qualifier",
+        "lloq_ngml",
+        "uloq_ngml",
+        "method_code",
+        "assay_version",
+        "run_id",
+        "instrument_id",
+        "reported_date",
+        "target",
+        "notes",
+        "ic50_nm",
+        "hill_slope",
+        "r2",
+        "qc_flag",
+        "reads",
+        "yield_gbases",
+        "q30",
+        "meanreadlen",
+        "pf_pass",
+        "entity_name"
+      ]
+    },
+    {
+      "id": "assaysch_BvXylLOvr6",
+      "name": "Plate Creation",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 6,
+      "fields": [
+        {
+          "name": "plate",
+          "type": "storage_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_10hDLpsQJE"
+        },
+        {
+          "name": "plate_number",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_QycNWfqi73"
+        },
+        {
+          "name": "parent_plate_barcode",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_1Wn3RxCUh0"
+        },
+        {
+          "name": "plate_id",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_9MRDS1fB8M"
+        },
+        {
+          "name": "plate_name",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_zSjhrlxJnL"
+        },
+        {
+          "name": "plate_barcode",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_s2hIGN6MIt"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "plate",
+        "plate_number",
+        "parent_plate_barcode",
+        "plate_id",
+        "plate_name",
+        "plate_barcode"
+      ]
+    },
+    {
+      "id": "assaysch_gIclquZsCb",
+      "name": "Plater Status",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "plater_entry",
+          "type": "entry_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_zLHYOqJBBx"
+        },
+        {
+          "name": "category",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_pzIlp41v1E"
+        },
+        {
+          "name": "type",
+          "type": "dropdown",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_bFgBfWyZss"
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_YwZiUX1yXr"
+        },
+        {
+          "name": "integration_message",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_v4cBsC9NhJ"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "plater_entry",
+        "category",
+        "type",
+        "status",
+        "integration_message"
+      ]
+    },
+    {
+      "id": "assaysch_nmN8xLrG16",
+      "name": "JS_Results",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 2,
+      "fields": [
+        {
+          "name": "slope",
+          "type": "boolean",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_i6TxYrTH52"
+        },
+        {
+          "name": "result",
+          "type": "entity_link",
+          "required": true,
+          "archived": false,
+          "is_multi": true,
+          "field_id": "tsf_IhlxKcBhex"
+        }
+      ],
+      "required_fields": [
+        "slope",
+        "result"
+      ],
+      "all_fields": [
+        "slope",
+        "result"
+      ]
+    },
+    {
+      "id": "assaysch_JSLU8MGR9I",
+      "name": "Result Test Clinical Pharma JGS",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "entity_name",
+          "type": "entity_link",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_k69jqfsTkR"
+        }
+      ],
+      "required_fields": [
+        "entity_name"
+      ],
+      "all_fields": [
+        "entity_name"
+      ]
+    },
+    {
+      "id": "assaysch_Z270Rs3U6y",
+      "name": "Result Test Clinical Pharma A ",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "entity_name",
+          "type": "entity_link",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_BNxam0Uzs9"
+        }
+      ],
+      "required_fields": [
+        "entity_name"
+      ],
+      "all_fields": [
+        "entity_name"
+      ]
+    },
+    {
+      "id": "assaysch_s0kf7Ar7JK",
+      "name": "Result Test ClinPharm",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "entity_name",
+          "type": "entity_link",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_hVXSOsFLyC"
+        }
+      ],
+      "required_fields": [
+        "entity_name"
+      ],
+      "all_fields": [
+        "entity_name"
+      ]
+    },
+    {
+      "id": "assaysch_qBfgvvj9dz",
+      "name": "Result TestClinical_Pharma",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "test_clinical_pharma",
+          "type": "entity_link",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_AJeCUDgJu9"
+        }
+      ],
+      "required_fields": [
+        "test_clinical_pharma"
+      ],
+      "all_fields": [
+        "test_clinical_pharma"
+      ]
+    },
+    {
+      "id": "assaysch_QAKmSObsx2",
+      "name": "Result PK Schema",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "entity_name",
+          "type": "entity_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_WPrpUNcrWr"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "entity_name"
+      ]
+    },
+    {
+      "id": "assaysch_kVcxAADxrN",
+      "name": "Result Test Clinical Pharma SS",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "entity_name",
+          "type": "entity_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_G6EEMEbPkw"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "entity_name"
+      ]
+    },
+    {
+      "id": "assaysch_lqvPDqGpq4",
+      "name": "Result Test Clinical Pharma LM",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "entity_name",
+          "type": "entity_link",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_fdBf3LolIE"
+        }
+      ],
+      "required_fields": [
+        "entity_name"
+      ],
+      "all_fields": [
+        "entity_name"
+      ]
+    },
+    {
+      "id": "assaysch_cETPFdfLCJ",
+      "name": "Results-Demo",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 8,
+      "fields": [
+        {
+          "name": "assay_id",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_8NSUpqGnMH"
+        },
+        {
+          "name": "assay_type",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_BLmQVTb0X9"
+        },
+        {
+          "name": "method",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_haxUIcHtQj"
+        },
+        {
+          "name": "result_value",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_HpL2BfMF2F"
+        },
+        {
+          "name": "result_unit",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_n8jlTBOdKd"
+        },
+        {
+          "name": "replicate",
+          "type": "integer",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_BJ3EoW0UK1"
+        },
+        {
+          "name": "analyst",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_wjCilcdkwU"
+        },
+        {
+          "name": "linked_sample",
+          "type": "entity_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_KZiPoaGyQv"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "assay_id",
+        "assay_type",
+        "method",
+        "result_value",
+        "result_unit",
+        "replicate",
+        "analyst",
+        "linked_sample"
+      ]
+    },
+    {
+      "id": "assaysch_iIkRa3mecy",
+      "name": "LNMCell Line QC Result",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "associated_cell_line",
+          "type": "entity_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_zSKYes3b0U"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "associated_cell_line"
+      ]
+    },
+    {
+      "id": "assaysch_ZMvtVEO3lL",
+      "name": "SS Cell Line QC Result",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "associated_cell_line",
+          "type": "entity_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_hzcIGZYMIo"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "associated_cell_line"
+      ]
+    },
+    {
+      "id": "assaysch_UfKmaKnZ5q",
+      "name": "jtcelllineresults",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "associated_cell_line",
+          "type": "entity_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_HkWO9KoGan"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "associated_cell_line"
+      ]
+    },
+    {
+      "id": "assaysch_XnHJ1mG9pY",
+      "name": "HPLC run results",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 10,
+      "fields": [
+        {
+          "name": "sample",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_2GjYpzfHhX"
+        },
+        {
+          "name": "injection_id",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_jyb35Dck7v"
+        },
+        {
+          "name": "sequence_name",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_46fsCQDcuV"
+        },
+        {
+          "name": "retention_time",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_fzqoUIzUjg"
+        },
+        {
+          "name": "area",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_g1ahWPu20j"
+        },
+        {
+          "name": "height",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Fro2mqm7Q0"
+        },
+        {
+          "name": "concentration",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_EwDfDU5FrQ"
+        },
+        {
+          "name": "concentration_unit",
+          "type": "boolean",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_x6At9AtdrN"
+        },
+        {
+          "name": "status",
+          "type": "boolean",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_zhk9QKrD1M"
+        },
+        {
+          "name": "instrument",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_Ngt4UYeKx1"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "sample",
+        "injection_id",
+        "sequence_name",
+        "retention_time",
+        "area",
+        "height",
+        "concentration",
+        "concentration_unit",
+        "status",
+        "instrument"
+      ]
+    },
+    {
+      "id": "assaysch_eeODk2VmNO",
+      "name": "tk_Cell Line QC Result",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 1,
+      "fields": [
+        {
+          "name": "associated_cell_line",
+          "type": "entity_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_KQ96uGjNDt"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "associated_cell_line"
+      ]
+    },
+    {
+      "id": "consch_W0fVAxGCpw",
+      "name": "test",
+      "type": "Container",
+      "prefix": "test",
+      "field_count": 0,
+      "fields": [],
+      "required_fields": [],
+      "all_fields": []
+    },
+    {
+      "id": "consch_DkxCtUN5kE",
+      "name": "DJ Test Tubes",
+      "type": "Container",
+      "prefix": "DJ_T",
+      "field_count": 0,
+      "fields": [],
+      "required_fields": [],
+      "all_fields": []
+    },
+    {
+      "id": "consch_sr63QMPXIP",
+      "name": "LM Tubes",
+      "type": "Container",
+      "prefix": "LM_T",
+      "field_count": 0,
+      "fields": [],
+      "required_fields": [],
+      "all_fields": []
+    },
+    {
+      "id": "consch_nTyWUd2R2z",
+      "name": "TK Test Tubes",
+      "type": "Container",
+      "prefix": "TK_T",
+      "field_count": 0,
+      "fields": [],
+      "required_fields": [],
+      "all_fields": []
+    },
+    {
+      "id": "consch_St96hAOBz2",
+      "name": "JGS Test Tubes",
+      "type": "Container",
+      "prefix": "JGS_T",
+      "field_count": 0,
+      "fields": [],
+      "required_fields": [],
+      "all_fields": []
+    },
+    {
+      "id": "consch_U84VZVdMEc",
+      "name": "SS Test Tubes",
+      "type": "Container",
+      "prefix": "SS_T",
+      "field_count": 0,
+      "fields": [],
+      "required_fields": [],
+      "all_fields": []
+    },
+    {
+      "id": "consch_Gt7eLA5MZd",
+      "name": "SV Test Tubes",
+      "type": "Container",
+      "prefix": "SV_T",
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "Quantity_mg",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_kH9tGlYXEi"
+        },
+        {
+          "name": "Concentration",
+          "type": "float",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_q3fQ23gnNU"
+        },
+        {
+          "name": "Storage_Condition",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_xBVd0M2rlG"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "Quantity_mg",
+        "Concentration",
+        "Storage_Condition"
+      ]
+    },
+    {
+      "id": "consch_M8Y3pKCQmm",
+      "name": "LNM_Cryovial 2 mL",
+      "type": "Container",
+      "prefix": "LNMC",
+      "field_count": 2,
+      "fields": [
+        {
+          "name": "Capacity/Units",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_gPxn5Ie3oe"
+        },
+        {
+          "name": "Supports volumes",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_8OUWNXQ5Mk"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "Capacity/Units",
+        "Supports volumes"
+      ]
+    },
+    {
+      "id": "consch_NQjGPjEzWs",
+      "name": "SS Cryovial 2 mL",
+      "type": "Container",
+      "prefix": "SSCV",
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "Capacity/Units",
+          "type": "text",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_D4jVcaOhyT"
+        },
+        {
+          "name": "Supports volumes",
+          "type": "dropdown",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_fmpKE0wyoC"
+        },
+        {
+          "name": "Can reside in boxes",
+          "type": "storage_link",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_5nKhrfEz7p"
+        },
+        {
+          "name": "Allowed contents",
+          "type": "entity_link",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_y1ng7aG8q1"
+        },
+        {
+          "name": "Barcode/Name template",
+          "type": "custom_entity_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_7MkbHekNUI"
+        }
+      ],
+      "required_fields": [
+        "Capacity/Units",
+        "Supports volumes",
+        "Can reside in boxes",
+        "Allowed contents"
+      ],
+      "all_fields": [
+        "Capacity/Units",
+        "Supports volumes",
+        "Can reside in boxes",
+        "Allowed contents",
+        "Barcode/Name template"
+      ]
+    },
+    {
+      "id": "consch_bEL7sJSJAn",
+      "name": "JT_Cryovial_2ml",
+      "type": "Container",
+      "prefix": "JT_Cryovial",
+      "field_count": 0,
+      "fields": [],
+      "required_fields": [],
+      "all_fields": []
+    },
+    {
+      "id": "consch_Av40xsPLhC",
+      "name": "tk_Cryovial 2 mL",
+      "type": "Container",
+      "prefix": "tk",
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "Capacity/Units",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_aD87mKeo2F"
+        },
+        {
+          "name": "Supports volumes",
+          "type": "text",
+          "required": true,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_gdvUDGxhMq"
+        },
+        {
+          "name": "Barcode/Name template",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_qUb7zbvMW8"
+        },
+        {
+          "name": "Allowed contents",
+          "type": "entity_link",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_8RcYveONPd"
+        },
+        {
+          "name": "Can reside in boxes",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_fwpA6iW08K"
+        }
+      ],
+      "required_fields": [
+        "Supports volumes"
+      ],
+      "all_fields": [
+        "Capacity/Units",
+        "Supports volumes",
+        "Barcode/Name template",
+        "Allowed contents",
+        "Can reside in boxes"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "from": "Sample",
+      "to": "DNA Sequence",
+      "via_field": "Construct_Name",
+      "relationship": "one-to-many"
+    },
+    {
+      "from": "Sample",
+      "to": "Container",
+      "via_field": "Batch_ID",
+      "relationship": "one-to-many"
+    },
+    {
+      "from": "Sample",
+      "to": "Results",
+      "via_field": "Sample_ID",
+      "relationship": "one-to-many"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "tenant": "excelra.benchling.com",
-  "generated_at": "2026-04-02T12:49:25.943223",
-  "schema_count": 54,
+  "generated_at": "2026-04-02T13:56:09.128432",
+  "schema_count": 55,
   "schemas": [
     {
       "id": "ts_ttjClSd9",
@@ -2384,6 +2384,36 @@
       "required_fields": [],
       "all_fields": [
         "associated_cell_line"
+      ]
+    },
+    {
+      "id": "assaysch_dVGFDI3c1P",
+      "name": "MIDA Audit Results",
+      "type": "Assay Result",
+      "prefix": "",
+      "field_count": 2,
+      "fields": [
+        {
+          "name": "mida_audit_status",
+          "type": "text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_q6KQ26HaCy"
+        },
+        {
+          "name": "mida_inferencecomments",
+          "type": "long_text",
+          "required": false,
+          "archived": false,
+          "is_multi": false,
+          "field_id": "tsf_UFou1JaA0k"
+        }
+      ],
+      "required_fields": [],
+      "all_fields": [
+        "mida_audit_status",
+        "mida_inferencecomments"
       ]
     },
     {

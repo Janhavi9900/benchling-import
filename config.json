@@ -5,7 +5,7 @@
     "dna_sequence_endpoint": "/dna-sequences",
     "custom_entity_endpoint": "/custom-entities",
     "parent_folder_id": "lib_Wi1jEfMSMK",
-    "api_key_env_var": "sk_oK50IgOG4fZRn1m5K6BcGifkMofQK",
+    "api_key_env_var": "BENCHLING_API_KEY",
     "timeout_seconds": 30
   },
   "excel": {

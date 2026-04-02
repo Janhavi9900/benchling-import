@@ -2,6 +2,7 @@
 ai/mapping_assistant.py
 Analyzes CRO Mapping.xlsx and Harmonized dataset and suggests
 intelligent column mappings using Claude AI (or mock mode).
+Now ERD-aware — reads live Benchling schema fields from benchling_erd.json.
 """
 
 import pandas as pd
@@ -20,8 +21,53 @@ USE_MOCK = True
 MAPPING_FILE      = "CRO Mapping.xlsx"
 HARMONIZED_FILE   = "Harmonized dataset_new.xlsx"
 APPROVED_MAPPING  = "ai/approved_mapping.json"
+ERD_FILE          = "ai/benchling_erd.json"
 
 SCHEMAS = ["Entry", "Sample", "DNA Sequence", "Results", "Location", "Box", "Container"]
+
+# Maps CRO Mapping sheet names → real Benchling schema names in ERD
+SCHEMA_TO_BENCHLING = {
+    "Sample":       "Sample",
+    "DNA Sequence": "DNA_Sequence_POC",
+    "Results":      "Results-Demo",
+    "Container":    "SV Test Tubes",
+    "Entry":        None,
+    "Location":     None,
+    "Box":          None,
+}
+
+
+# ─── LOAD ERD ─────────────────────────────────────────────────────────────────
+
+def load_erd() -> dict:
+    """Load the live Benchling ERD built by schema_fetcher.py."""
+    if not os.path.exists(ERD_FILE):
+        print("  ⚠️  ERD file not found. Run 'python run_erd_fetch.py' first.")
+        return {}
+    with open(ERD_FILE) as f:
+        return json.load(f)
+
+
+def get_benchling_fields(schema_name: str, erd: dict) -> dict:
+    """
+    Get real Benchling field definitions for a schema from the ERD.
+    Returns dict of {field_name: {type, required}}
+    """
+    benchling_name = SCHEMA_TO_BENCHLING.get(schema_name)
+    if not benchling_name:
+        return {}
+    for s in erd.get("schemas", []):
+        if s["name"] == benchling_name:
+            return {
+                f["name"]: {
+                    "type":     f.get("type", "unknown"),
+                    "required": f.get("required", False),
+                    "field_id": f.get("field_id", ""),
+                }
+                for f in s.get("fields", [])
+                if not f.get("archived", False)
+            }
+    return {}
 
 
 # ─── STEP 1: Read CRO Mapping sheet ───────────────────────────────────────────
@@ -32,11 +78,9 @@ def read_mapping_sheet(sheet_name):
         df = pd.read_excel(MAPPING_FILE, sheet_name=sheet_name, header=None)
         if df.empty or df.shape[1] < 3:
             return []
-
         mappings = []
         for _, row in df.iterrows():
             row_vals = [str(v).strip() if pd.notna(v) else "" for v in row]
-            # Skip header rows
             if row_vals[0] in ["Entity Attributes", "nan", ""]:
                 continue
             entry = {
@@ -67,18 +111,13 @@ def ask_claude(benchling_fields, harmonized_columns, schema_name):
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-
         prompt = f"""
 You are a data mapping expert for a Benchling bioinformatics pipeline.
-
 Schema: {schema_name}
-
 Benchling fields that need values from input data:
 {json.dumps(benchling_fields, indent=2)}
-
 Available columns in the harmonized input file:
 {json.dumps(harmonized_columns, indent=2)}
-
 For each Benchling field, suggest the best matching harmonized column.
 Return ONLY a JSON array like this (no explanation, no markdown):
 [
@@ -89,7 +128,6 @@ Return ONLY a JSON array like this (no explanation, no markdown):
     "reason": "Both refer to sample identifier"
   }}
 ]
-
 Rules:
 - confidence is 0-100
 - If no good match exists, set suggested_column to null and confidence to 0
@@ -102,13 +140,12 @@ Rules:
         )
         raw = response.content[0].text.strip()
         return json.loads(raw)
-
     except Exception as e:
         print(f"  ⚠️  Claude API error: {e}")
         return []
 
 
-# ─── STEP 4: Mock Claude suggestion (no API key needed) ───────────────────────
+# ─── STEP 4: Mock Claude suggestion ───────────────────────────────────────────
 
 def mock_claude_suggest(benchling_fields, harmonized_columns, schema_name):
     """
@@ -167,6 +204,9 @@ def mock_claude_suggest(benchling_fields, harmonized_columns, schema_name):
         "result_unit":        ("Result_Unit",        99, "Exact match"),
         "replicate":          ("Replicate",          99, "Exact match"),
         "analyst":            ("Analyst",            99, "Exact match"),
+        "internal_sample":    ("Sample_ID",          95, "Internal sample ID → Sample_ID"),
+        "external_specimen":  ("Sample_Name",        85, "External specimen → Sample_Name"),
+        "cro":                ("CRO-Name",           95, "CRO field → CRO-Name"),
     }
 
     suggestions = []
@@ -176,7 +216,7 @@ def mock_claude_suggest(benchling_fields, harmonized_columns, schema_name):
         field_lower = field.lower().replace(" ", "_")
         matched = False
 
-        # ── Priority 1: Schema-specific override for 'name' field ──
+        # Priority 1: Schema-specific override for 'name' field
         if field_lower == "name" and schema_name in schema_name_mapping:
             col, conf, reason = schema_name_mapping[schema_name]
             suggestions.append({
@@ -187,7 +227,7 @@ def mock_claude_suggest(benchling_fields, harmonized_columns, schema_name):
             })
             continue
 
-        # ── Priority 2: Exact match ──
+        # Priority 2: Exact match
         if field_lower in harmonized_lower:
             suggestions.append({
                 "benchling_field":   field,
@@ -197,7 +237,7 @@ def mock_claude_suggest(benchling_fields, harmonized_columns, schema_name):
             })
             matched = True
 
-        # ── Priority 3: Keyword map ──
+        # Priority 3: Keyword map
         if not matched:
             for keyword, (col, conf, reason) in keyword_map.items():
                 if keyword in field_lower:
@@ -210,7 +250,7 @@ def mock_claude_suggest(benchling_fields, harmonized_columns, schema_name):
                     matched = True
                     break
 
-        # ── Priority 4: No match found ──
+        # Priority 4: No match
         if not matched:
             suggestions.append({
                 "benchling_field":  field,
@@ -228,25 +268,22 @@ def detect_column_changes():
     """Compare current harmonized columns with previously approved mapping."""
     if not os.path.exists(APPROVED_MAPPING):
         return []
-
     with open(APPROVED_MAPPING) as f:
         approved = json.load(f)
-
     current_cols = set(get_harmonized_columns())
     previously_used = set()
     for schema_data in approved.values():
         for item in schema_data:
             if item.get("approved_column"):
                 previously_used.add(item["approved_column"])
-
     missing = previously_used - current_cols
     return list(missing)
 
 
 # ─── STEP 6: Main analysis function ───────────────────────────────────────────
 
-def analyze_mapping(schema_name):
-    """Full analysis for one schema sheet."""
+def analyze_mapping(schema_name, erd: dict = None):
+    """Full analysis for one schema sheet — now ERD-aware."""
     print(f"\n{'='*55}")
     print(f"  📋 Analyzing Schema: {schema_name}")
     print(f"{'='*55}")
@@ -258,23 +295,62 @@ def analyze_mapping(schema_name):
 
     harmonized_cols = get_harmonized_columns()
 
-    # Only analyze fields that come from harmonized file
+    # Get real Benchling fields from ERD
+    benchling_fields_def = get_benchling_fields(schema_name, erd or {})
+    if benchling_fields_def:
+        print(f"  🧬 Real Benchling fields ({len(benchling_fields_def)}): "
+              f"{list(benchling_fields_def.keys())}")
+        required = [f for f, d in benchling_fields_def.items() if d["required"]]
+        if required:
+            print(f"  ⚠️  Required in Benchling: {required}")
+    else:
+        print(f"  ℹ️  No ERD data for '{schema_name}' — using mapping file only")
+
     input_fields = [r["benchling_field"] for r in mapping_rows if r["is_input_column"]]
     hardcoded    = [r for r in mapping_rows if not r["is_input_column"]]
 
-    print(f"  🔒 Hardcoded fields ({len(hardcoded)}): {[r['benchling_field'] for r in hardcoded]}")
-    print(f"  🔍 Fields to map from harmonized file ({len(input_fields)}): {input_fields}")
+    print(f"  🔒 Hardcoded fields ({len(hardcoded)}): "
+          f"{[r['benchling_field'] for r in hardcoded]}")
+    print(f"  🔍 Fields to map from harmonized ({len(input_fields)}): {input_fields}")
+
+    # Check for required Benchling fields missing from mapping
+    if benchling_fields_def:
+        all_mapped = [r["benchling_field"] for r in mapping_rows]
+        missing_required = [
+            f for f, d in benchling_fields_def.items()
+            if d["required"] and f not in all_mapped
+        ]
+        if missing_required:
+            print(f"\n  ❌ REQUIRED BENCHLING FIELDS NOT IN MAPPING: {missing_required}")
+        unmapped_benchling = [
+            f for f in benchling_fields_def.keys()
+            if f not in all_mapped and f not in harmonized_cols
+        ]
+        if unmapped_benchling:
+            print(f"  ⚠️  Benchling fields not covered: {unmapped_benchling}")
 
     if not input_fields:
         print("  ℹ️  No fields need harmonized column mapping.")
         return []
 
-    # Get suggestions
-    print(f"\n  🤖 {'[MOCK MODE] ' if USE_MOCK else '[CLAUDE AI] '}Generating suggestions...")
+    print(f"\n  🤖 {'[MOCK MODE]' if USE_MOCK else '[CLAUDE AI]'} "
+          f"Generating ERD-aware suggestions...")
     if USE_MOCK:
         suggestions = mock_claude_suggest(input_fields, harmonized_cols, schema_name)
     else:
         suggestions = ask_claude(input_fields, harmonized_cols, schema_name)
+
+    # Enrich with ERD field type info
+    for s in suggestions:
+        field = s["benchling_field"]
+        if field in benchling_fields_def:
+            s["benchling_type"]     = benchling_fields_def[field]["type"]
+            s["benchling_required"] = benchling_fields_def[field]["required"]
+            s["benchling_field_id"] = benchling_fields_def[field]["field_id"]
+        else:
+            s["benchling_type"]     = "unknown"
+            s["benchling_required"] = False
+            s["benchling_field_id"] = ""
 
     # Display results
     print(f"\n  {'─'*50}")
@@ -282,9 +358,11 @@ def analyze_mapping(schema_name):
     needs_review  = []
 
     for s in suggestions:
-        conf = s["confidence"]
-        col  = s["suggested_column"]
+        conf  = s["confidence"]
+        col   = s["suggested_column"]
         field = s["benchling_field"]
+        btype = s.get("benchling_type", "")
+        req   = "⚠️ REQUIRED" if s.get("benchling_required") else ""
 
         if conf >= 90 and col:
             status = "✅ AUTO"
@@ -296,10 +374,13 @@ def analyze_mapping(schema_name):
             status = "❌ MISSING"
             needs_review.append(s)
 
-        print(f"  {status}  {field:<25} → {str(col):<25} [{conf}%]")
+        print(f"  {status}  {field:<25} → {str(col):<25} [{conf}%] {req}")
+        if btype and btype != "unknown":
+            print(f"           Benchling type: {btype}")
         print(f"           Reason: {s['reason']}")
 
-    print(f"\n  ✅ Auto-approved: {len(auto_approved)} | ⚠️  Needs review: {len(needs_review)}")
+    print(f"\n  ✅ Auto-approved: {len(auto_approved)} | "
+          f"⚠️  Needs review: {len(needs_review)}")
     return suggestions
 
 
@@ -317,10 +398,18 @@ def save_approved_mapping(all_suggestions):
 
 def run_full_analysis():
     print("\n" + "🚀 " * 20)
-    print("  BENCHLING MAPPING ASSISTANT")
+    print("  BENCHLING MAPPING ASSISTANT — ERD AWARE")
     print(f"  Mode: {'🟡 MOCK (no API key)' if USE_MOCK else '🟢 CLAUDE AI (live)'}")
     print(f"  Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("🚀 " * 20)
+
+    # Load ERD
+    erd = load_erd()
+    if erd:
+        print(f"\n  🧬 ERD loaded: {erd.get('schema_count', 0)} Benchling schemas")
+        print(f"  🔗 Generated : {erd.get('generated_at', 'unknown')[:10]}")
+    else:
+        print("\n  ⚠️  Running without ERD — field type info unavailable")
 
     # Check for column changes
     changes = detect_column_changes()
@@ -329,24 +418,22 @@ def run_full_analysis():
         for c in changes:
             print(f"   ❌ {c}")
 
-    # Get harmonized columns
     harmonized_cols = get_harmonized_columns()
-    print(f"\n📊 Harmonized file has {len(harmonized_cols)} columns")
+    print(f"\n  📊 Harmonized file has {len(harmonized_cols)} columns")
 
     # Analyze each schema
     all_results = {}
     for schema in SCHEMAS:
-        suggestions = analyze_mapping(schema)
+        suggestions = analyze_mapping(schema, erd)
         if suggestions:
             all_results[schema] = suggestions
 
-    # Save results
     save_approved_mapping(all_results)
 
-    # Final summary
-    total     = sum(len(v) for v in all_results.values())
-    auto      = sum(1 for v in all_results.values() for s in v if s["confidence"] >= 90 and s["suggested_column"])
-    review    = total - auto
+    total  = sum(len(v) for v in all_results.values())
+    auto   = sum(1 for v in all_results.values()
+                 for s in v if s["confidence"] >= 90 and s["suggested_column"])
+    review = total - auto
 
     print(f"\n{'='*55}")
     print(f"  📊 FINAL SUMMARY")
@@ -355,7 +442,8 @@ def run_full_analysis():
     print(f"  Total fields     : {total}")
     print(f"  Auto-approved    : {auto} ✅")
     print(f"  Needs review     : {review} ⚠️")
-    print(f"\n  Next step: Run 'python run_mapping_check.py' to review")
+    print(f"  ERD connected    : {'Yes 🧬' if erd else 'No ⚠️'}")
+    print(f"\n  Next step: Run 'python run_validation.py'")
     print(f"{'='*55}\n")
 
 

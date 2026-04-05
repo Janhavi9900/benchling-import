@@ -1,66 +1,367 @@
 {
   "Sample": [
     {
-      "benchling_field": "name",
+      "benchling_field": "Sample_ID",
+      "suggested_column": "Sample_ID",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Sample_Name",
       "suggested_column": "Sample_Name",
       "confidence": 99,
-      "reason": "Confirmed: Sample name \u2192 Sample_Name",
-      "benchling_type": "unknown",
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Program",
+      "suggested_column": "Program",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Target",
+      "suggested_column": "Target",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Linker_Type",
+      "suggested_column": "Linker_Type",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "DAR",
+      "suggested_column": "DAR",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "float",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Conjugation_Method",
+      "suggested_column": "Conjugation_Method",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "QC_Status",
+      "suggested_column": "QC_Status",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Batch_ID",
+      "suggested_column": "Batch_ID",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Manufacturing_Date",
+      "suggested_column": "Manufacturing_Date",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Expiry_Date",
+      "suggested_column": "Expiry_Date",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "date",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Manufacturer",
+      "suggested_column": "Manufacturer",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Purity_Percent",
+      "suggested_column": "Purity_Percent",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "float",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Instrument_ID",
+      "suggested_column": "Instrument_ID",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Instrument_Name",
+      "suggested_column": "Instrument_Name",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Instrument_Type",
+      "suggested_column": "Instrument_Type",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Manufacturer_Inst",
+      "suggested_column": "Manufacturer_Inst",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Model",
+      "suggested_column": "Model",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Calibration_Date",
+      "suggested_column": "Calibration_Date",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "date",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Entity linked",
+      "suggested_column": "Sample_Name",
+      "confidence": 95,
+      "reason": "Manually assigned",
+      "status": "manual",
+      "benchling_type": "dna_sequence_link",
       "benchling_required": false,
-      "benchling_field_id": ""
+      "mapped": "Sample_Name",
+      "conf": 95
     }
   ],
   "DNA Sequence": [
     {
-      "benchling_field": "bases",
-      "suggested_column": "Sequence",
-      "confidence": 97,
-      "reason": "'bases' is DNA sequence data \u2014 exact match",
-      "benchling_type": "unknown",
-      "benchling_required": false,
-      "benchling_field_id": ""
+      "benchling_field": "CRO",
+      "suggested_column": "CRO-Name",
+      "confidence": 95,
+      "reason": "CRO field \u2192 CRO-Name",
+      "status": "auto",
+      "benchling_type": "integer",
+      "benchling_required": false
     },
     {
-      "benchling_field": "name",
+      "benchling_field": "Internal_sample_ID",
+      "suggested_column": "Sample_ID",
+      "confidence": 95,
+      "reason": "Internal sample ID \u2192 Sample_ID",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "External_Specimen_ID",
+      "suggested_column": "Construct_Name",
+      "confidence": 95,
+      "reason": "Manually assigned",
+      "status": "manual",
+      "benchling_type": "text",
+      "benchling_required": false,
+      "mapped": "Construct_Name",
+      "conf": 95
+    },
+    {
+      "benchling_field": "Host_System",
+      "suggested_column": "Host_System",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Vector",
+      "suggested_column": "Vector",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Construct_Name",
       "suggested_column": "Construct_Name",
       "confidence": 99,
-      "reason": "Confirmed: DNA Sequence name \u2192 Construct_Name",
-      "benchling_type": "unknown",
-      "benchling_required": false,
-      "benchling_field_id": ""
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "GC_Content",
+      "suggested_column": "GC_Content",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "float",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Sequence_Length",
+      "suggested_column": "Sequence_Length",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "integer",
+      "benchling_required": false
     }
   ],
-  "Location": [
+  "Results": [
     {
-      "benchling_field": "name",
-      "suggested_column": "Storage_Location",
+      "benchling_field": "assay_id",
+      "suggested_column": "Assay_ID",
       "confidence": 99,
-      "reason": "Confirmed: Location name \u2192 Storage_Location",
-      "benchling_type": "unknown",
-      "benchling_required": false,
-      "benchling_field_id": ""
-    }
-  ],
-  "Box": [
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
     {
-      "benchling_field": "name",
-      "suggested_column": "Box",
+      "benchling_field": "assay_type",
+      "suggested_column": "Assay_Type",
       "confidence": 99,
-      "reason": "Confirmed: Box name \u2192 Box column",
-      "benchling_type": "unknown",
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "method",
+      "suggested_column": "Method",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "result_value",
+      "suggested_column": "Result_Value",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "float",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "result_unit",
+      "suggested_column": "Result_Unit",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "replicate",
+      "suggested_column": "Replicate",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "integer",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "analyst",
+      "suggested_column": "Analyst",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "linked_sample",
+      "suggested_column": "DAR",
+      "confidence": 95,
+      "reason": "Manually assigned",
+      "status": "manual",
+      "benchling_type": "entity_link",
       "benchling_required": false,
-      "benchling_field_id": ""
+      "mapped": "DAR",
+      "conf": 95
     }
   ],
   "Container": [
     {
-      "benchling_field": "Container",
-      "suggested_column": null,
-      "confidence": 0,
-      "reason": "No matching column found \u2014 manual review needed",
-      "benchling_type": "unknown",
-      "benchling_required": false,
-      "benchling_field_id": ""
+      "benchling_field": "Quantity_mg",
+      "suggested_column": "Quantity_mg",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "float",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Concentration",
+      "suggested_column": "Concentration",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "float",
+      "benchling_required": false
+    },
+    {
+      "benchling_field": "Storage_Condition",
+      "suggested_column": "Storage_Condition",
+      "confidence": 99,
+      "reason": "Exact column name match",
+      "status": "auto",
+      "benchling_type": "text",
+      "benchling_required": false
     }
   ]
 }

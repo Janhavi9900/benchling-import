@@ -1,16 +1,28 @@
 """
-Importer.py
-Main pipeline orchestrator.
-- Uses the file uploaded via the UI (no hardcoded file paths)
-- Uses the notebook selected by the user in the UI
-- Falls back to config.json values if nothing selected
+Importer.py  —  Benchling ingestion pipeline
+=============================================
+Fully dynamic — no CRO Mapping.xlsx, no hardcoded schema IDs.
+
+Sources of truth:
+  - ai/approved_mapping.json   : field → column mapping confirmed by user in UI
+  - ai/selected_schemas.json   : schema IDs chosen by user in Step 3 of UI
+  - ai/selected_notebook.json  : destination folder chosen by user in Step 1
+  - uploads/harmonized_upload* : the data file uploaded by user
+
+Flow:
+  1. Load approved_mapping + selected_schemas + data file
+  2. Create CRO folders + notebook entries
+  3. Create DNA sequences   (fields from mapping, schemaId from selected_schemas)
+  4. Create samples         (fields from mapping, Entity linked = DNA id)
+  5. Create inventory       (Location → Box → Container, barcode = Sample_ID)
+  6. Upload assay results   (schemaId from selected_schemas, linked to sample)
 """
 
 import json
 import logging
 import os
 import sys
-from typing import List
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -20,24 +32,14 @@ from benchling_client import (
     create_dna_sequence,
     create_entry,
     create_folder,
-    get_entry_details,
     get_result_table_id_from_entry,
     create_location,
     create_box,
     create_container_direct,
     transfer_into_container_direct,
     find_storage_by_name,
-    find_any_entity_by_name,
-    find_dna_sequence_by_name,
-    find_custom_entity_by_name,
 )
 from config_loader import load_config
-from payload_builder import (
-    build_payload_from_mapping,
-    build_payloads_from_mapping,
-    infer_column_types,
-    normalize_mapping_dataframe,
-)
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -51,532 +53,464 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ─── Helper: get active data file ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# HELPERS — file / config resolution
+# ══════════════════════════════════════════════════════════════════════════════
 
-def get_data_file(override_path: str | None = None) -> str:
-    """
-    Returns the data file to use for ingestion.
-    Priority:
-      1. override_path passed directly (from backend websocket)
-      2. HARMONIZED_FILE env var (set by backend on upload)
-      3. uploads/ folder (check for uploaded file)
-      4. config.json data_workbook (legacy fallback)
-    """
-    if override_path and os.path.exists(override_path):
-        return override_path
-
-    env_file = os.getenv("HARMONIZED_FILE")
-    if env_file and os.path.exists(env_file):
-        return env_file
-
+def get_data_file(override: Optional[str] = None) -> str:
+    """Return path to the user-uploaded data file."""
+    if override and os.path.exists(override):
+        return override
+    env = os.getenv("HARMONIZED_FILE")
+    if env and os.path.exists(env):
+        return env
     for ext in [".xlsx", ".csv"]:
         p = os.path.join("uploads", f"harmonized_upload{ext}")
         if os.path.exists(p):
             return p
-
-    # Legacy fallback — config.json
     cfg = load_config()
     return cfg.get("excel", {}).get("data_workbook", "Harmonized dataset_new.xlsx")
 
 
-# ─── Helper: get selected notebook folder ─────────────────────────────────────
-
 def get_selected_folder(benchling_cfg: dict) -> str:
-    """
-    Returns the parent folder ID to ingest data into.
-    Priority:
-      1. ai/selected_notebook.json (set by user in UI)
-      2. SELECTED_FOLDER_ID env var
-      3. config.json parent_folder_id (fallback)
-    """
-    # Check UI selection first
+    """Return the lib_ folder ID the user picked in the UI."""
     if os.path.exists("ai/selected_notebook.json"):
         with open("ai/selected_notebook.json") as f:
-            selected = json.load(f)
-        folder_id = selected.get("folder_id")
-        if folder_id:
-            logger.info(
-                f"📁 Destination notebook: {selected.get('folder_name', folder_id)}"
-            )
-            return folder_id
-
-    # Check env var
-    env_folder = os.getenv("SELECTED_FOLDER_ID")
-    if env_folder:
-        return env_folder
-
-    # Fall back to config.json
-    folder_id = benchling_cfg.get("parent_folder_id")
-    if folder_id:
-        logger.info(f"📁 Using config folder: {folder_id}")
-        return folder_id
-
-    raise ValueError(
-        "No destination folder found. "
-        "Please select a notebook in the UI or set parent_folder_id in config.json."
-    )
+            nb = json.load(f)
+        fid = nb.get("folder_id")
+        if fid:
+            logger.info(f"Destination folder: {nb.get('folder_name', fid)}")
+            return fid
+    env = os.getenv("SELECTED_FOLDER_ID")
+    if env:
+        return env
+    fid = benchling_cfg.get("parent_folder_id")
+    if fid:
+        return fid
+    raise ValueError("No destination folder — select a notebook in the UI.")
 
 
-# ─── Entry import ─────────────────────────────────────────────────────────────
+def load_approved_mapping() -> Dict[str, List[Dict]]:
+    """Load field→column mapping confirmed by user."""
+    path = "ai/approved_mapping.json"
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            "No approved mapping found. Complete the mapping step in the UI first."
+        )
+    with open(path) as f:
+        return json.load(f)
 
-def entry_import(
-    entry_df: pd.DataFrame,
-    input_df: pd.DataFrame,
-    template_path: str,
-) -> dict:
+
+def load_selected_schemas() -> Dict[str, Dict]:
     """
-    Constructs a payload for a Notebook Entry.
-    Uses the first row of data for entry-level attributes.
+    Load schema selections from Step 3 of the UI.
+    Keys are section IDs: sample, dna, results, inventory, location, box
+    Values are: { id: <schemaId>, name: <schemaName>, type: <schemaType> }
     """
-    if input_df.empty:
-        raise ValueError("Input data for entries is empty.")
-
-    mapping      = normalize_mapping_dataframe(entry_df)
-    column_types = infer_column_types(input_df)
-    first_row    = input_df.iloc[0]
-
-    payload = build_payload_from_mapping(
-        mapping,
-        template_path,
-        data_row=first_row,
-        column_types=column_types,
-    )
-
-    # Fallback: ensure entry has a name
-    if not payload.get("name"):
-        cro_name = first_row.get("CRO-Name", "Unknown Entry")
-        payload["name"] = str(cro_name)
-
-    return payload
+    path = "ai/selected_schemas.json"
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return {}
 
 
-# ─── DNA sequence import ───────────────────────────────────────────────────────
-
-def dna_sequence_import(
-    dna_sequence_df: pd.DataFrame,
-    input_df: pd.DataFrame,
-    template_path: str,
-) -> List[dict]:
-    """Builds a list of DNA sequence payloads from the input data."""
-    return build_payloads_from_mapping(
-        dna_sequence_df,
-        template_path,
-        input_df,
-    )
+def lookup_schema_id_in_erd(schema_name: str) -> Optional[str]:
+    """Fallback: find schema ID by name from cached ERD."""
+    erd_path = "ai/benchling_erd.json"
+    if not os.path.exists(erd_path):
+        return None
+    with open(erd_path) as f:
+        erd = json.load(f)
+    for s in erd.get("schemas", []):
+        if s.get("name") == schema_name:
+            return s.get("id")
+    return None
 
 
-# ─── Custom entity (sample) import ────────────────────────────────────────────
+def resolve_schema_id(
+    section_key: str,
+    selected_schemas: Dict,
+    fallback_name: str = "",
+) -> Optional[str]:
+    """
+    Return schema ID for a section.
+    Tries selected_schemas[section_key] first, then ERD lookup by fallback_name.
+    """
+    schema = selected_schemas.get(section_key, {})
+    # Handle both flat {id:...} and nested {schema: {id:...}} shapes
+    sid = schema.get("id") or schema.get("schema", {}).get("id")
+    if sid:
+        return sid
+    if fallback_name:
+        return lookup_schema_id_in_erd(fallback_name)
+    return None
 
-def custom_entity_import(
-    custom_df: pd.DataFrame,
-    input_df: pd.DataFrame,
-    template_path: str,
-) -> List[dict]:
-    """Builds a list of Custom Entity (Sample) payloads from the input data."""
-    return build_payloads_from_mapping(
-        custom_df,
-        template_path,
-        input_df,
-    )
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAYLOAD BUILDER — approved_mapping.json driven
+# ══════════════════════════════════════════════════════════════════════════════
+
+_RUNTIME_FIELDS = {"entity linked", "linked_sample", "entity_linked"}
 
 
-# ─── Main pipeline ─────────────────────────────────────────────────────────────
+def _coerce(raw: Any) -> Any:
+    """Make a value JSON-safe and Benchling-friendly."""
+    if isinstance(raw, pd.Timestamp):
+        return raw.date().isoformat()
+    try:
+        if pd.isna(raw):
+            return None
+    except Exception:
+        pass
+    if hasattr(raw, "item"):        # numpy scalar
+        raw = raw.item()
+    if isinstance(raw, float) and raw == int(raw):
+        return int(raw)
+    return raw
+
+
+def build_fields(
+    schema_key: str,
+    mapping: Dict,
+    row: pd.Series,
+) -> Dict[str, Any]:
+    """
+    Build a Benchling fields dict from approved_mapping + one data row.
+    Returns: { "FieldName": {"value": <value>}, ... }
+    Skips: ignored entries, missing columns, runtime-resolved links.
+    """
+    out = {}
+    for entry in mapping.get(schema_key, []):
+        bf     = entry.get("benchling_field", "")
+        col    = entry.get("suggested_column") or entry.get("mapped")
+        status = entry.get("status", "")
+
+        if status == "ignored":
+            continue
+        if bf.lower().replace(" ", "_") in _RUNTIME_FIELDS or bf.lower() in _RUNTIME_FIELDS:
+            continue
+        if not col or col not in row.index:
+            continue
+
+        val = _coerce(row[col])
+        if val is None:
+            continue
+        out[bf] = {"value": val}
+
+    return out
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# POSITION HELPER
+# ══════════════════════════════════════════════════════════════════════════════
+
+def pos_to_well(p: Any) -> str:
+    """
+    Convert numeric position or existing well coordinate.
+    1 → A1, 13 → B1, 'A1' → 'A1'
+    """
+    try:
+        i = int(str(p).strip())
+        return f"{chr(64 + ((i - 1) // 12 + 1))}{(i - 1) % 12 + 1}"
+    except Exception:
+        return str(p).strip()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN PIPELINE
+# ══════════════════════════════════════════════════════════════════════════════
 
 def main(
-    file_path: str | None = None,
-    mapping_file_path: str | None = None,
+    file_path: Optional[str] = None,
+    mapping_file_path: Optional[str] = None,
 ) -> None:
-    """
-    Full ingestion pipeline:
-      1. Read configuration
-      2. Determine which data file to use (uploaded via UI or config fallback)
-      3. Determine which notebook to ingest into (selected via UI or config fallback)
-      4. Create CRO folders
-      5. Create notebook entries
-      6. Create DNA sequences
-      7. Create samples (custom entities) — linked to DNA
-      8. Manage inventory (locations, boxes, containers)
-      9. Upload assay results
-    """
 
-    # ── Load config ──────────────────────────────────────────────────────────
+    # ── 0. Load all config sources ────────────────────────────────────────────
     config        = load_config()
-    excel_cfg     = config.get("excel", {})
-    templates_cfg = config.get("templates", {})
     benchling_cfg = config.get("benchling", {})
 
-    # ── Determine mapping workbook (CRO Mapping.xlsx) ────────────────────────
-    # This is the schema mapping file — always from config
-    file_path = file_path or excel_cfg.get("mapping_workbook")
+    logger.info("Loading approved mapping...")
+    mapping = load_approved_mapping()
+    logger.info(f"Schemas in mapping: {list(mapping.keys())}")
 
-    # ── Determine data file (uploaded by user) ────────────────────────────────
-    mapping_file_path = get_data_file(mapping_file_path)
-    logger.info(f"📂 Data file: {mapping_file_path}")
+    logger.info("Loading schema selections...")
+    selected_schemas = load_selected_schemas()
+    logger.info(f"Selected schemas: { {k: v.get('name','?') for k, v in selected_schemas.items()} }")
 
-    if not file_path:
-        raise ValueError("Mapping workbook path missing in config.json")
-    if not os.path.exists(mapping_file_path):
-        raise ValueError(f"Data file not found: {mapping_file_path}")
+    data_file = get_data_file(mapping_file_path)
+    logger.info(f"Data file: {data_file}")
+    if not os.path.exists(data_file):
+        raise FileNotFoundError(f"Data file not found: {data_file}")
 
-    # ── Sheet names ───────────────────────────────────────────────────────────
-    entry_sheet     = excel_cfg.get("entry_sheet_name",     "Entry")
-    dna_sheet       = excel_cfg.get("dna_sheet_name",       "DNA Sequence")
-    custom_sheet    = excel_cfg.get("custom_sheet_name",    "Sample")
-    results_sheet   = excel_cfg.get("results_sheet_name",   "Results")
-    location_sheet  = excel_cfg.get("location_sheet_name",  "Location")
-    box_sheet       = excel_cfg.get("box_sheet_name",       "Box")
-    container_sheet = excel_cfg.get("container_sheet_name", "Container")
+    df = (pd.read_excel(data_file) if data_file.endswith(".xlsx") else pd.read_csv(data_file))
+    logger.info(f"Loaded {len(df)} rows x {len(df.columns)} columns")
 
-    # ── Template paths ────────────────────────────────────────────────────────
-    entry_template     = templates_cfg.get("entry_template")
-    dna_template       = templates_cfg.get("dna_template")
-    custom_template    = templates_cfg.get("custom_template")
-    result_template    = templates_cfg.get("result_template", "result_template.json")
-    inventory_template = "inventory_template.json"
-
-    # ── Get destination folder (selected in UI) ───────────────────────────────
     parent_folder_id = get_selected_folder(benchling_cfg)
 
-    # ── 1. Read Excel mapping sheets ──────────────────────────────────────────
-    logger.info("📖 Reading mapping workbook sheets...")
-    sheets = pd.read_excel(
-        file_path,
-        sheet_name=[
-            entry_sheet, dna_sheet, custom_sheet,
-            results_sheet, location_sheet, box_sheet, container_sheet,
-        ],
+    # ── Resolve schema IDs dynamically from user's Step 3 selection ───────────
+    sample_schema_id    = (resolve_schema_id("sample",    selected_schemas)
+                           or resolve_schema_id("Sample",       selected_schemas)
+                           or lookup_schema_id_in_erd("Sample"))
+
+    dna_schema_id       = (resolve_schema_id("dna",       selected_schemas)
+                           or resolve_schema_id("DNA Sequence",  selected_schemas)
+                           or lookup_schema_id_in_erd("DNA_Sequence_POC"))
+
+    results_schema_id   = (resolve_schema_id("results",   selected_schemas)
+                           or resolve_schema_id("Results",       selected_schemas))
+
+    container_schema_id = (resolve_schema_id("inventory", selected_schemas)
+                           or resolve_schema_id("Container",     selected_schemas))
+
+    location_schema_id  = (resolve_schema_id("location",  selected_schemas)
+                           or lookup_schema_id_in_erd("Location"))
+
+    box_schema_id       = (resolve_schema_id("box",       selected_schemas)
+                           or lookup_schema_id_in_erd("Box"))
+
+    entry_template_id   = config.get("templates", {}).get(
+        "entry_template_id", "tmpl_4fdaFvrFMZ"
     )
 
-    entry_df     = sheets[entry_sheet]
-    dna_df       = sheets[dna_sheet]
-    custom_df    = sheets[custom_sheet]
-    results_df   = sheets[results_sheet]
-    location_df  = sheets[location_sheet]
-    box_df       = sheets[box_sheet]
-    container_df = sheets[container_sheet]
+    logger.info(f"Schema IDs — Sample:{sample_schema_id} | DNA:{dna_schema_id} | "
+                f"Results:{results_schema_id} | Container:{container_schema_id}")
 
-    # Read the actual data rows from the uploaded file
-    logger.info(f"📊 Reading data from: {os.path.basename(mapping_file_path)}")
-    if mapping_file_path.endswith(".csv"):
-        mapping_df = pd.read_csv(mapping_file_path)
-    else:
-        mapping_df = pd.read_excel(mapping_file_path)
-
-    logger.info(f"✅ Loaded {len(mapping_df)} rows × {len(mapping_df.columns)} columns")
-
-    # ── 2. Create folders per CRO ─────────────────────────────────────────────
-    logger.info("📁 Creating CRO folders...")
-    unique_cros = mapping_df["CRO-Name"].dropna().unique()
-    folder_ids  = {}
-    project_ids = {}
+    # ── 1. CRO folders ────────────────────────────────────────────────────────
+    logger.info("Creating CRO folders...")
+    folder_ids:  Dict[str, str] = {}
+    project_ids: Dict[str, str] = {}
+    unique_cros = (df["CRO-Name"].dropna().unique()
+                   if "CRO-Name" in df.columns else ["Default"])
 
     for cro in unique_cros:
-        folder_payload = {"name": str(cro), "parentFolderId": parent_folder_id}
-        folder  = create_folder(folder_payload)
-        f_id    = getattr(folder, "id", folder.get("id") if isinstance(folder, dict) else None)
-        folder_ids[cro] = f_id
-
-        p_id = getattr(folder, "project_id", None)
-        if p_id is None and isinstance(folder, dict):
-            p_id = folder.get("projectId")
+        folder  = create_folder({"name": str(cro), "parentFolderId": parent_folder_id})
+        f_id    = getattr(folder, "id", None) or (folder.get("id") if isinstance(folder, dict) else None)
+        p_id    = getattr(folder, "project_id", None) or (folder.get("projectId") if isinstance(folder, dict) else None)
+        folder_ids[cro]  = f_id
         project_ids[cro] = p_id
+        logger.info(f"  Folder {cro}: {f_id}")
 
-        logger.info(f"✅ Created folder for CRO: {cro} (ID: {f_id}, Project: {p_id})")
-
-    # ── 3. Create notebook entries (one per CRO) ──────────────────────────────
-    logger.info("📓 Creating notebook entries...")
-    entry_ids = {}
+    # ── 2. Notebook entries (one per CRO) ─────────────────────────────────────
+    logger.info("Creating notebook entries...")
+    entry_ids: Dict[str, str] = {}
 
     for cro in unique_cros:
-        cro_data = mapping_df[mapping_df["CRO-Name"] == cro]
-        if cro_data.empty:
-            continue
-
-        entry_payload = entry_import(
-            entry_df,
-            input_df=cro_data,
-            template_path=entry_template,
-        )
-        entry_payload["name"] = str(cro)
-        if cro in folder_ids:
-            entry_payload["folderId"] = folder_ids[cro]
-
-        entry_result = create_entry(entry_payload)
-        entry_id     = getattr(entry_result, "id", None)
-        if entry_id is None and isinstance(entry_result, dict):
-            entry_id = entry_result.get("id")
-
-        if not entry_id:
+        result = create_entry({
+            "entryTemplateId": entry_template_id,
+            "folderId":        folder_ids.get(cro, parent_folder_id),
+            "name":            str(cro),
+        })
+        eid = getattr(result, "id", None) or (result.get("id") if isinstance(result, dict) else None)
+        if not eid:
             raise RuntimeError(f"Entry creation failed for CRO: {cro}")
+        entry_ids[cro] = eid
+        logger.info(f"  Entry {eid} for {cro}")
 
-        entry_ids[cro] = entry_id
-        logger.info(f"✅ Created Entry ID: {entry_id} for CRO: {cro}")
+    # ── 3. DNA sequences (one per row) ────────────────────────────────────────
+    logger.info("Creating DNA sequences...")
+    created_dna: List[Tuple[str, int, str]] = []
 
-    # ── 4. Build assay mapping ────────────────────────────────────────────────
-    cro_assay_mapping = {}
-    for cro in unique_cros:
-        cro_data = mapping_df[mapping_df["CRO-Name"] == cro]
-        assay_ids = (
-            cro_data["Assay_ID"].dropna().unique().tolist()
-            if "Assay_ID" in cro_data.columns else []
-        )
-        cro_assay_mapping[cro] = {
-            "entry_id":      entry_ids.get(cro),
-            "assay_ids":     assay_ids,
-            "dna_sequences": [],
+    for idx, row in df.iterrows():
+        cro   = str(row.get("CRO-Name", "Default")) if "CRO-Name" in df.columns else "Default"
+        bases = str(row["Sequence"]) if "Sequence" in row.index and pd.notna(row.get("Sequence")) else ""
+        name  = str(row.get("Construct_Name") or row.get("Sample_Name") or f"DNA-{idx}")
+
+        payload = {
+            "bases":      bases,
+            "isCircular": False,
+            "name":       name,
+            "fields":     build_fields("DNA Sequence", mapping, row),
+            "folderId":   folder_ids.get(cro, parent_folder_id),
         }
-
-    # ── 5. Create DNA sequences ───────────────────────────────────────────────
-    logger.info("🧬 Creating DNA sequences...")
-    dna_payloads = dna_sequence_import(dna_df, mapping_df, dna_template)
-    created_dna_sequences = []
-
-    for payload, (_, row) in zip(dna_payloads, mapping_df.iterrows()):
-        cro = row.get("CRO-Name")
+        if dna_schema_id:
+            payload["schemaId"] = dna_schema_id
         if cro in entry_ids:
             payload["entryId"] = entry_ids[cro]
-        if cro in folder_ids:
-            payload["folderId"] = folder_ids[cro]
 
-        dna_name = payload.get("name", "").strip()
         try:
-            logger.info(f"  🧬 Creating DNA sequence: {dna_name}")
-            dna_result = create_dna_sequence(payload)
-            dna_id = getattr(
-                dna_result, "id",
-                dna_result.get("id") if isinstance(dna_result, dict) else None
-            )
-            if dna_id:
-                created_dna_sequences.append(dna_id)
-                if cro in cro_assay_mapping:
-                    cro_assay_mapping[cro]["dna_sequences"].append(dna_id)
-                logger.info(f"  ✅ Created DNA {dna_id} for CRO: {cro}")
+            logger.info(f"  Creating DNA: {name}")
+            res    = create_dna_sequence(payload)
+            dna_id = getattr(res, "id", None) or (res.get("id") if isinstance(res, dict) else None)
+            created_dna.append((dna_id, int(idx), cro))
+            logger.info(f"  DNA created: {dna_id}")
         except Exception as e:
-            logger.error(f"  ❌ Error creating DNA sequence '{dna_name}': {e}")
-            raise e
+            logger.error(f"  DNA error row {idx}: {e}")
+            raise
 
-    # ── 6. Create samples (custom entities) ───────────────────────────────────
-    logger.info("🧪 Creating samples...")
-    custom_payloads  = custom_entity_import(custom_df, mapping_df, custom_template)
-    created_entities = []
+    # ── 4. Samples ────────────────────────────────────────────────────────────
+    logger.info("Creating samples...")
+    created_entities: List[Tuple[str, int, str]] = []
 
-    for idx, (payload, (_, row)) in enumerate(
-        zip(custom_payloads, mapping_df.iterrows())
-    ):
-        cro = row.get("CRO-Name")
+    for dna_id, idx, cro in created_dna:
+        row    = df.iloc[idx]
+        name   = str(row.get("Sample_Name") or row.get("Sample_ID") or f"Sample-{idx}")
+        fields = build_fields("Sample", mapping, row)
+
+        # Wire Entity linked → DNA sequence created above
+        if dna_id:
+            fields["Entity linked"] = {"value": dna_id}
+            logger.info(f"  Entity linked → {dna_id}")
+
+        payload = {
+            "name":     name,
+            "fields":   fields,
+            "folderId": folder_ids.get(cro, parent_folder_id),
+        }
+        if sample_schema_id:
+            payload["schemaId"] = sample_schema_id
         if cro in entry_ids:
             payload["entryId"] = entry_ids[cro]
-        if cro in folder_ids:
-            payload["folderId"] = folder_ids[cro]
 
-        # Link DNA sequence to sample (row-for-row)
-        if idx < len(created_dna_sequences):
-            dna_id = created_dna_sequences[idx]
-            if "fields" not in payload:
-                payload["fields"] = {}
-            payload["fields"]["Entity linked"] = {"value": dna_id}
-            logger.info(f"  🔗 Linking DNA {dna_id} to Sample row {idx + 1}")
-
-        ce_name = payload.get("name", "").strip()
         try:
-            logger.info(f"  🧪 Creating Sample: {ce_name}")
-            result = create_custom_entity(payload)
-            ce_id  = getattr(
-                result, "id",
-                result.get("id") if isinstance(result, dict) else None
-            )
-            created_entities.append((ce_id, cro))
-            logger.info(f"  ✅ Created sample {ce_id} for CRO: {cro}")
+            logger.info(f"  Creating Sample: {name}")
+            res       = create_custom_entity(payload)
+            entity_id = getattr(res, "id", None) or (res.get("id") if isinstance(res, dict) else None)
+            created_entities.append((entity_id, idx, cro))
+            logger.info(f"  Sample created: {entity_id}")
         except Exception as e:
-            logger.error(f"  ❌ Error creating Sample '{ce_name}': {e}")
-            raise e
+            logger.error(f"  Sample error row {idx}: {e}")
+            raise
 
-    # ── 7. Inventory management ────────────────────────────────────────────────
-    logger.info("\n📦 Inventory Management: Locations, Boxes, Containers...")
-    storage_cache = {}
+    # ── 5. Inventory: Location → Box → Container → Transfer ───────────────────
+    logger.info("Creating inventory...")
+    storage_cache: Dict[str, str] = {}
 
-    for idx, (custom_id, cro) in enumerate(created_entities):
-        row = mapping_df.iloc[idx]
+    for entity_id, idx, cro in created_entities:
+        row          = df.iloc[idx]
+        loc_name     = str(row.get("Storage_Location", "")).strip()
+        box_name     = str(row.get("Box", "")).strip()
+        position     = str(row.get("Position", "A1")).strip()
+        barcode      = str(row.get("Sample_ID", "")).strip()      # shown in Benchling inventory
+        cont_name    = str(row.get("Sample_Name", barcode)).strip()
+        qty_val      = row.get("Quantity_mg", 0.0)
+        conc_val     = row.get("Concentration", 0.0)
+        storage_cond = str(row.get("Storage_Condition", "")).strip()
 
-        # 7a. Resolve location
-        location_payload = build_payload_from_mapping(
-            normalize_mapping_dataframe(location_df),
-            inventory_template,
-            data_row=row,
-            column_types=infer_column_types(mapping_df),
-        )
-        location_name   = location_payload.get("name")
-        location_schema = location_payload.get("schemaId")
-
-        if location_name:
-            loc_key = f"loc_{location_name}_{location_schema}"
-            if loc_key not in storage_cache:
-                loc_id = find_storage_by_name(location_name, location_schema)
-                if not loc_id:
-                    loc_result = create_location(location_payload)
-                    loc_id = getattr(
-                        loc_result, "id",
-                        loc_result.get("id") if isinstance(loc_result, dict) else None
-                    )
-                storage_cache[loc_key] = loc_id
-            location_id = storage_cache[loc_key]
-
-            # 7b. Resolve box
-            box_payload = build_payload_from_mapping(
-                normalize_mapping_dataframe(box_df),
-                inventory_template,
-                data_row=row,
-                column_types=infer_column_types(mapping_df),
-            )
-            box_name   = box_payload.get("name")
-            box_schema = box_payload.get("schemaId")
-
-            if box_name:
-                box_key = f"box_{box_name}_{box_schema}_{location_id}"
-                if box_key not in storage_cache:
-                    box_id = find_storage_by_name(box_name, box_schema)
-                    if not box_id:
-                        box_payload["parentStorageId"] = location_id
-                        box_result = create_box(box_payload)
-                        box_id = getattr(
-                            box_result, "id",
-                            box_result.get("id") if isinstance(box_result, dict) else None
-                        )
-                    storage_cache[box_key] = box_id
-                box_id = storage_cache[box_key]
-
-                # 7c. Create container
-                container_payload = build_payload_from_mapping(
-                    normalize_mapping_dataframe(container_df),
-                    inventory_template,
-                    data_row=row,
-                    column_types=infer_column_types(mapping_df),
-                )
-
-                # Convert position to well coordinate
-                raw_pos = str(row.get("Position", "1")).strip()
-
-                def pos_to_coord(p):
-                    try:
-                        i       = int(p)
-                        row_idx = (i - 1) // 10
-                        col_idx = (i - 1) % 10
-                        return f"{chr(65 + row_idx)}{col_idx + 1}"
-                    except Exception:
-                        return p
-
-                pos = pos_to_coord(raw_pos)
-                container_payload["parentStorageId"] = f"{box_id}:{pos}"
-
-                try:
-                    qty_val = (
-                        container_payload.get("fields", {})
-                        .get("Quantity_mg", {})
-                        .get("value")
-                    )
-                    qty_obj = (
-                        qty_val
-                        if isinstance(qty_val, dict) and "value" in qty_val
-                        else {"value": qty_val, "units": "mg"}
-                    )
-
-                    allowed_keys = {
-                        "name", "barcode", "schemaId",
-                        "parentStorageId", "quantity", "fields", "projectId",
-                    }
-                    create_payload = {
-                        k: v for k, v in container_payload.items()
-                        if k in allowed_keys
-                    }
-                    if not create_payload.get("name") and "Container" in container_payload:
-                        create_payload["name"] = container_payload["Container"]
-
-                    container_result = create_container_direct(create_payload)
-                    cont_id = (
-                        container_result.get("id")
-                        if isinstance(container_result, dict)
-                        else getattr(container_result, "id", None)
-                    )
-
-                    transfer_payload = {
-                        "contents": [{"entityId": custom_id, "amount": qty_obj}]
-                    }
-                    transfer_into_container_direct(cont_id, transfer_payload)
-
-                    logger.info(
-                        f"  ✅ Container {cont_id} filled with "
-                        f"{qty_obj['value']} {qty_obj['units']} of sample {custom_id}"
-                    )
-
-                except Exception as e:
-                    logger.warning(f"  ⚠️ Container error for {custom_id}: {e}")
-
-    # ── 8. Process assay results ───────────────────────────────────────────────
-    logger.info("\n📊 Creating result payloads per CRO...")
-
-    with open("result_template.json", encoding="utf-8") as f:
-        base_assay_payload = json.load(f)
-    tableId = base_assay_payload.get("tableId")
-
-    # Group samples by CRO
-    cro_custom_entities: dict[str, list] = {}
-    for custom_id, cro in created_entities:
-        cro_custom_entities.setdefault(cro, []).append(custom_id)
-
-    cro_result_payloads = {}
-    for cro, custom_ids in cro_custom_entities.items():
-        cro_data       = mapping_df[mapping_df["CRO-Name"] == cro]
-        result_payloads = build_payloads_from_mapping(
-            results_df, result_template, cro_data
-        )
-
-        cro_results = []
-        for idx, result_payload in enumerate(result_payloads):
-            if idx < len(custom_ids):
-                result_payload.setdefault("fields", {})["linked_sample"] = {
-                    "value": custom_ids[idx]
-                }
-
-            if "fields" in result_payload:
-                result_payload["fields"] = {
-                    k.lower(): v for k, v in result_payload["fields"].items()
-                }
-
-            if not result_payload.get("projectId") and cro in project_ids:
-                result_payload["projectId"] = project_ids[cro]
-
-            cro_results.append(result_payload)
-
-        cro_result_payloads[cro] = {
-            "assayResults": cro_results,
-            "tableId":      tableId,
-        }
-
-    # ── 9. Upload results to Benchling ────────────────────────────────────────
-    logger.info("\n📋 Uploading results...")
-    result_tables_cfg   = config.get("result_tables", {})
-    default_table_id    = result_tables_cfg.get("default_table_id", tableId)
-
-    for cro, entry_id in entry_ids.items():
-        cro_payload = cro_result_payloads.get(cro)
-        if not cro_payload:
+        if not loc_name or not box_name:
+            logger.warning(f"  Row {idx}: missing Storage_Location or Box — skipping inventory")
             continue
 
-        # Get the result table ID from the entry
-        try:
-            target_table_id = get_result_table_id_from_entry(entry_id) or default_table_id
-        except Exception:
-            target_table_id = default_table_id
+        # Location
+        loc_key = f"loc_{loc_name}"
+        if loc_key not in storage_cache:
+            loc_id = find_storage_by_name(loc_name, location_schema_id) if location_schema_id else None
+            if not loc_id:
+                loc_payload = {"name": loc_name}
+                if location_schema_id:
+                    loc_payload["schemaId"] = location_schema_id
+                r      = create_location(loc_payload)
+                loc_id = getattr(r, "id", None) or (r.get("id") if isinstance(r, dict) else None)
+                logger.info(f"  Created location: {loc_name} ({loc_id})")
+            else:
+                logger.info(f"  Reusing location: {loc_name} ({loc_id})")
+            storage_cache[loc_key] = loc_id
+        location_id = storage_cache[loc_key]
 
-        cro_payload["tableId"] = target_table_id
-        logger.info(f"  📤 Uploading results for {cro} to Table {target_table_id}")
+        # Box
+        box_key = f"box_{box_name}_{location_id}"
+        if box_key not in storage_cache:
+            box_id = find_storage_by_name(box_name, box_schema_id) if box_schema_id else None
+            if not box_id:
+                box_payload = {"name": box_name, "parentStorageId": location_id}
+                if box_schema_id:
+                    box_payload["schemaId"] = box_schema_id
+                r      = create_box(box_payload)
+                box_id = getattr(r, "id", None) or (r.get("id") if isinstance(r, dict) else None)
+                logger.info(f"  Created box: {box_name} ({box_id})")
+            else:
+                logger.info(f"  Reusing box: {box_name} ({box_id})")
+            storage_cache[box_key] = box_id
+        box_id = storage_cache[box_key]
+
+        # Container
+        well         = pos_to_well(position)
+        extra_fields = build_fields("Container", mapping, row)
+        cont_fields  = {
+            "Quantity_mg":       {"value": float(qty_val)  if qty_val  else 0.0},
+            "Concentration":     {"value": float(conc_val) if conc_val else 0.0},
+            "Storage_Condition": {"value": storage_cond},
+            **extra_fields,
+        }
+
+        container_payload = {
+            "name":            cont_name,
+            "barcode":         barcode,
+            "parentStorageId": f"{box_id}:{well}",
+            "fields":          cont_fields,
+        }
+        if container_schema_id:
+            container_payload["schemaId"] = container_schema_id
 
         try:
-            response = create_assay_results_bulk(cro_payload)
-            logger.info(f"     ✅ Success! Response: {response}")
+            cont_result = create_container_direct(container_payload)
+            cont_id     = cont_result.get("id") if isinstance(cont_result, dict) else None
+            logger.info(f"  Container: {cont_id} | barcode:{barcode} | pos:{box_name}:{well}")
+
+            transfer_into_container_direct(cont_id, {
+                "contents": [{
+                    "entityId":      entity_id,
+                    "concentration": {
+                        "value": float(conc_val) if conc_val else 0.0,
+                        "units": "mg/mL",
+                    },
+                }]
+            })
+            logger.info(f"  Sample {entity_id} → container {cont_id}")
+
         except Exception as e:
-            logger.error(f"     ❌ Error uploading results for {cro}: {e}")
-            raise
+            logger.warning(f"  Container/transfer error row {idx}: {e}")
+
+    # ── 6. Assay results ──────────────────────────────────────────────────────
+    logger.info("Uploading assay results...")
+
+    if not results_schema_id:
+        logger.warning("No results schema ID — skipping results upload.")
+        logger.warning("Tip: select an Assay Result schema in Step 3 of the UI.")
+    else:
+        cro_entities: Dict[str, List[Tuple[str, int]]] = {}
+        for entity_id, idx, cro in created_entities:
+            cro_entities.setdefault(cro, []).append((entity_id, idx))
+
+        for cro, entity_list in cro_entities.items():
+            assay_results = []
+
+            for entity_id, idx in entity_list:
+                row    = df.iloc[idx]
+                fields = build_fields("Results", mapping, row)
+                fields = {k.lower(): v for k, v in fields.items()}
+                fields["linked_sample"] = {"value": entity_id}
+
+                assay_results.append({
+                    "schemaId": results_schema_id,   # from user's schema selection — not hardcoded
+                    "fields":   fields,
+                    **({"projectId": project_ids[cro]} if project_ids.get(cro) else {}),
+                })
+
+            if not assay_results:
+                logger.warning(f"  No results for {cro} — skipping")
+                continue
+
+            # Optional: get tableId from notebook entry for display in notebook
+            entry_id        = entry_ids.get(cro)
+            target_table_id = None
+            if entry_id:
+                try:
+                    target_table_id = get_result_table_id_from_entry(entry_id)
+                except Exception:
+                    pass
+
+            payload: Dict[str, Any] = {"assayResults": assay_results}
+            if target_table_id:
+                payload["tableId"] = target_table_id
+
+            try:
+                response = create_assay_results_bulk(payload)
+                logger.info(f"  Results uploaded for {cro}: {response}")
+            except Exception as e:
+                logger.error(f"  Result upload failed for {cro}: {e}")
+                raise
+
+    logger.info("Pipeline complete!")
 
 
 if __name__ == "__main__":

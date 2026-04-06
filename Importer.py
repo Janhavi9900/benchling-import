@@ -159,8 +159,12 @@ _RUNTIME_FIELDS = {"entity linked", "linked_sample", "entity_linked"}
 _STRUCTURAL_FIELDS = {"cro", "folder", "folderid", "projectid"}
 
 
-def _coerce(raw: Any) -> Any:
-    """Make a value JSON-safe and Benchling-friendly."""
+def _coerce(raw: Any, benchling_type: str = "text") -> Any:
+    """
+    Make a value JSON-safe and Benchling-friendly.
+    Respects the Benchling field type so text fields are always strings,
+    numeric fields are always numbers, date fields are ISO strings.
+    """
     if isinstance(raw, pd.Timestamp):
         return raw.date().isoformat()
     try:
@@ -168,8 +172,31 @@ def _coerce(raw: Any) -> Any:
             return None
     except Exception:
         pass
-    if hasattr(raw, "item"):        # numpy scalar
+    if hasattr(raw, "item"):        # numpy scalar → Python native
         raw = raw.item()
+
+    if benchling_type == "text":
+        # Always send as string — avoids "1260" being sent as integer 1260
+        return str(raw).strip()
+
+    if benchling_type in ("integer", "int"):
+        try:
+            return int(float(str(raw)))
+        except (ValueError, TypeError):
+            return None
+
+    if benchling_type == "float":
+        try:
+            return float(str(raw))
+        except (ValueError, TypeError):
+            return None
+
+    if benchling_type == "date":
+        if isinstance(raw, str):
+            return raw.strip()
+        return str(raw)
+
+    # fallback — preserve original but coerce whole-number floats to int
     if isinstance(raw, float) and raw == int(raw):
         return int(raw)
     return raw
@@ -229,7 +256,7 @@ def build_fields(
         if not col or col not in row.index:
             continue
 
-        val = _coerce(row[col])
+        val = _coerce(row[col], benchling_type)
         if val is None:
             continue
 
@@ -289,7 +316,18 @@ def main(
         raise FileNotFoundError(f"Data file not found: {data_file}")
 
     df = (pd.read_excel(data_file) if data_file.endswith(".xlsx") else pd.read_csv(data_file))
-    logger.info(f"Loaded {len(df)} rows x {len(df.columns)} columns")
+
+    # ── Drop completely empty rows and rows missing Sample_ID or CRO-Name ─────
+    # These are trailing blank rows from Excel that cause nan/NaT entries
+    before = len(df)
+    df = df.dropna(how="all")                          # drop rows where ALL cells are empty
+    if "CRO-Name" in df.columns:
+        df = df[df["CRO-Name"].notna()]                # drop rows with no CRO
+        df = df[df["CRO-Name"].astype(str).str.strip() != ""]
+    if "Sample_ID" in df.columns:
+        df = df[df["Sample_ID"].notna()]               # drop rows with no Sample ID
+    df = df.reset_index(drop=True)
+    logger.info(f"Loaded {before} rows, {before - len(df)} empty rows dropped → {len(df)} valid rows x {len(df.columns)} columns")
 
     parent_folder_id = get_selected_folder(benchling_cfg)
 
@@ -328,13 +366,37 @@ def main(
     unique_cros = (df["CRO-Name"].dropna().unique()
                    if "CRO-Name" in df.columns else ["Default"])
 
+    def find_existing_folder(name: str, parent_id: str) -> Optional[str]:
+        """Return existing folder ID if already exists under parent — prevents duplicates on re-run."""
+        try:
+            import requests as _req
+            cfg      = load_config()
+            api_key  = cfg["benchling"]["api_key_env_var"]
+            key      = os.getenv(api_key, api_key) if not api_key.startswith("sk_") else api_key
+            base     = cfg["benchling"]["base_url"]
+            resp     = _req.get(f"{base}/folders", auth=(key, ""), timeout=15)
+            if resp.status_code == 200:
+                for f in resp.json().get("folders", []):
+                    if f.get("name") == name and f.get("parentFolderId") == parent_id:
+                        return f.get("id")
+        except Exception:
+            pass
+        return None
+
     for cro in unique_cros:
-        folder  = create_folder({"name": str(cro), "parentFolderId": parent_folder_id})
-        f_id    = getattr(folder, "id", None) or (folder.get("id") if isinstance(folder, dict) else None)
-        p_id    = getattr(folder, "project_id", None) or (folder.get("projectId") if isinstance(folder, dict) else None)
-        folder_ids[cro]  = f_id
-        project_ids[cro] = p_id
-        logger.info(f"  Folder {cro}: {f_id}")
+        cro_str      = str(cro).strip()
+        existing_fid = find_existing_folder(cro_str, parent_folder_id)
+        if existing_fid:
+            logger.info(f"  Reusing existing folder {cro_str}: {existing_fid}")
+            folder_ids[cro]  = existing_fid
+            project_ids[cro] = None
+        else:
+            folder  = create_folder({"name": cro_str, "parentFolderId": parent_folder_id})
+            f_id    = getattr(folder, "id", None) or (folder.get("id") if isinstance(folder, dict) else None)
+            p_id    = getattr(folder, "project_id", None) or (folder.get("projectId") if isinstance(folder, dict) else None)
+            folder_ids[cro]  = f_id
+            project_ids[cro] = p_id
+            logger.info(f"  Created folder {cro_str}: {f_id}")
 
     # ── 2. Notebook entries (one per CRO) ─────────────────────────────────────
     logger.info("Creating notebook entries...")

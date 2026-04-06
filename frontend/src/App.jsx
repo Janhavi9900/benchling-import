@@ -30,7 +30,6 @@ const api = {
   report:    ()        => fetch(`${API}/api/report/latest`).then(r=>r.json()),
 };
 
-// ── Data sections — auto-detected from column names ───────────────────────────
 const DATA_SECTIONS = [
   {
     id:"sample", label:"Sample & Meta", icon:"🧪", color:"#7c6fcd",
@@ -83,7 +82,6 @@ const DATA_SECTIONS = [
   },
 ];
 
-// ── Confidence score explanation ──────────────────────────────────────────────
 function getConfidenceExplanation(conf, reason, field, col) {
   if(!col) return {
     label:"No Match",
@@ -117,7 +115,6 @@ function getConfidenceExplanation(conf, reason, field, col) {
   };
 }
 
-// ── Primitives ────────────────────────────────────────────────────────────────
 function Tooltip({text,children}) {
   const [show,setShow]=useState(false);
   return (
@@ -140,10 +137,16 @@ function Tooltip({text,children}) {
   );
 }
 
-const Tag = ({color,children}) => (
-  <span style={{background:color+"20",color,border:`1px solid ${color}35`,
-    borderRadius:4,padding:"2px 8px",fontSize:10,fontWeight:600,
-    letterSpacing:.5,textTransform:"uppercase",whiteSpace:"nowrap"}}>{children}</span>
+const Tag = ({color,children,onClick,clickable}) => (
+  <span onClick={onClick}
+    style={{background:color+"20",color,border:`1px solid ${color}35`,
+      borderRadius:4,padding:"2px 8px",fontSize:10,fontWeight:600,
+      letterSpacing:.5,textTransform:"uppercase",whiteSpace:"nowrap",
+      cursor:clickable?"pointer":"default",
+      transition:clickable?"all .15s":"none",
+      userSelect:"none",
+      ...(clickable?{":hover":{background:color+"35"}}:{})
+    }}>{children}</span>
 );
 
 const Pill = ({color,children,sm}) => (
@@ -218,7 +221,6 @@ const Spinner = () => (
     borderTopColor:C.purple,borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
 );
 
-// ── Confidence bar with explanation tooltip ───────────────────────────────────
 function ConfidenceBar({conf, reason, field, col}) {
   const info = getConfidenceExplanation(conf, reason, field, col);
   return (
@@ -433,13 +435,9 @@ function ImportStep({onNext,setUploadData,setErdData}) {
 // ── Step 2: Schema Selection ──────────────────────────────────────────────────
 function SchemaSelectionStep({onNext,onBack,uploadData,erdData,setSchemaSelections}) {
   const cols = (uploadData?.columns||[]).map(c=>c.toLowerCase().replace(/ /g,"_"));
-
-  // Auto-detect which sections exist in the uploaded file
   const detectedSections = DATA_SECTIONS.filter(section=>
     section.keywords.some(kw => cols.some(c=>c.includes(kw)||kw.includes(c)))
   );
-
-  // Get schemas from ERD grouped by type
   const schemasByType = {};
   (erdData?.schemas||[]).forEach(s=>{
     if(!schemasByType[s.type]) schemasByType[s.type]=[];
@@ -469,9 +467,7 @@ function SchemaSelectionStep({onNext,onBack,uploadData,erdData,setSchemaSelectio
 
   const allConfirmed=detectedSections.every(s=>confirmed[s.id]);
   const confirmedCount=Object.values(confirmed).filter(Boolean).length;
-
   const typeColor=t=>t==="Custom Entity"?C.blue:t==="Assay Result"?C.cyan:t==="Container"?C.yellow:C.purple;
-
   const handleNext=()=>{ setSchemaSelections(selections); onNext(); };
 
   return (
@@ -493,13 +489,10 @@ function SchemaSelectionStep({onNext,onBack,uploadData,erdData,setSchemaSelectio
           </Pill>
         </div>
       </div>
-
-      {/* Progress bar */}
       <div style={{background:"rgba(255,255,255,0.06)",borderRadius:6,height:4,marginBottom:20}}>
         <div style={{width:`${detectedSections.length>0?(confirmedCount/detectedSections.length)*100:0}%`,
           height:4,borderRadius:6,background:`linear-gradient(90deg,${C.purple},${C.green})`,transition:"width .4s"}}/>
       </div>
-
       <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
         {detectedSections.map(section=>{
           const sel=selections[section.id]||{mode:"default",schema:section.defaultSchema};
@@ -509,13 +502,10 @@ function SchemaSelectionStep({onNext,onBack,uploadData,erdData,setSchemaSelectio
           const detectedCols=(uploadData?.columns||[]).filter(c=>
             section.keywords.some(kw=>c.toLowerCase().replace(/ /g,"_").includes(kw)||kw.includes(c.toLowerCase()))
           );
-
           return (
             <div key={section.id}
               style={{borderRadius:12,border:`1px solid ${isConf?section.color+"50":C.border}`,
                 background:isConf?section.color+"06":C.card,overflow:"hidden",transition:"all .2s"}}>
-
-              {/* Header row */}
               <div onClick={()=>!isConf&&setExpanded(isOpen?null:section.id)}
                 style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",cursor:isConf?"default":"pointer"}}>
                 <div style={{width:36,height:36,borderRadius:8,background:section.color+"22",
@@ -537,12 +527,8 @@ function SchemaSelectionStep({onNext,onBack,uploadData,erdData,setSchemaSelectio
                 </div>
                 {!isConf&&<span style={{color:C.muted,fontSize:12}}>{isOpen?"▲":"▼"}</span>}
               </div>
-
-              {/* Expanded */}
               {isOpen&&!isConf&&(
                 <div style={{borderTop:`1px solid ${C.border}`,padding:16}}>
-
-                  {/* Detected columns */}
                   <div style={{marginBottom:14}}>
                     <div style={{fontSize:10,color:C.muted,letterSpacing:.5,textTransform:"uppercase",marginBottom:8,fontWeight:600}}>
                       Columns detected in your file for this section
@@ -555,8 +541,6 @@ function SchemaSelectionStep({onNext,onBack,uploadData,erdData,setSchemaSelectio
                       {detectedCols.length===0&&<span style={{color:C.muted,fontSize:11}}>No columns matched for this section</span>}
                     </div>
                   </div>
-
-                  {/* Default / Custom toggle */}
                   <div style={{marginBottom:14}}>
                     <div style={{fontSize:10,color:C.muted,letterSpacing:.5,textTransform:"uppercase",marginBottom:8,fontWeight:600}}>
                       Schema Mode
@@ -586,8 +570,6 @@ function SchemaSelectionStep({onNext,onBack,uploadData,erdData,setSchemaSelectio
                       </button>
                     </div>
                   </div>
-
-                  {/* Custom schema picker */}
                   {sel.mode==="custom"&&(
                     <div style={{marginBottom:14}}>
                       <div style={{fontSize:10,color:C.muted,letterSpacing:.5,textTransform:"uppercase",marginBottom:8,fontWeight:600}}>
@@ -621,8 +603,6 @@ function SchemaSelectionStep({onNext,onBack,uploadData,erdData,setSchemaSelectio
                       </div>
                     </div>
                   )}
-
-                  {/* Default schema info */}
                   {sel.mode==="default"&&(
                     <div style={{background:C.card2,borderRadius:8,padding:"10px 12px",marginBottom:14,border:`1px solid ${C.border}`}}>
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -635,7 +615,6 @@ function SchemaSelectionStep({onNext,onBack,uploadData,erdData,setSchemaSelectio
                       </div>
                     </div>
                   )}
-
                   <div style={{display:"flex",justifyContent:"flex-end"}}>
                     <Btn sm color={C.green} onClick={()=>confirmSection(section.id)}
                       tooltip="Confirm this schema selection and move to the next section">
@@ -648,7 +627,6 @@ function SchemaSelectionStep({onNext,onBack,uploadData,erdData,setSchemaSelectio
           );
         })}
       </div>
-
       <div style={{display:"flex",justifyContent:"space-between"}}>
         <Btn ghost onClick={onBack}>← Back</Btn>
         <Btn onClick={handleNext} disabled={!allConfirmed}
@@ -680,6 +658,30 @@ function MappingStep({onNext,onBack,uploadData,setMappingData}) {
       .finally(()=>setLoading(false));
   },[]);
 
+  // ── Toggle status between "auto" and "review" for a specific row ──
+  const toggleStatus=(schema,idx)=>{
+    setMapping(prev=>{
+      const u={...prev};
+      u[schema]=[...prev[schema]];
+      const current=u[schema][idx];
+      const currentStatus=current.status;
+      // Only allow toggling between auto/system ↔ review
+      const newStatus=(currentStatus==="auto"||currentStatus==="system")?"review":"auto";
+      u[schema][idx]={...current,status:newStatus};
+      return u;
+    });
+    // Keep mappingData in sync
+    setMappingData(prev=>{
+      if(!prev) return prev;
+      const u={...prev};
+      u[schema]=[...prev[schema]];
+      const current=u[schema][idx];
+      const newStatus=(current.status==="auto"||current.status==="system")?"review":"auto";
+      u[schema][idx]={...current,status:newStatus};
+      return u;
+    });
+  };
+
   if(loading) return (
     <div style={{textAlign:"center",padding:60}}>
       <Spinner/>
@@ -696,6 +698,9 @@ function MappingStep({onNext,onBack,uploadData,setMappingData}) {
   const sColor=s=>s==="auto"?C.green:s==="system"?C.cyan:s==="review"?C.yellow:C.red;
   const sLabel=s=>s==="auto"?"Auto":s==="system"?"System":s==="review"?"Review":"Missing";
 
+  // Only auto/system rows can be toggled (missing stays as-is)
+  const isToggleable=s=>s==="auto"||s==="system"||s==="review";
+
   const health=schema=>{
     const m=mapping[schema];
     if(!m) return C.muted;
@@ -709,7 +714,7 @@ function MappingStep({onNext,onBack,uploadData,setMappingData}) {
       <div style={{marginBottom:20}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
           <div style={{fontSize:11,color:C.purple,letterSpacing:.8,textTransform:"uppercase",fontWeight:600}}>Step 4 of 8</div>
-          <InfoBadge text="Claude AI matched your file columns to Benchling schema fields. Hover over any confidence bar to see how and why the score was given."/>
+          <InfoBadge text="Claude AI matched your file columns to Benchling schema fields. Hover over confidence bars for scoring details. Click a status badge to toggle between Auto and Review."/>
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
@@ -726,7 +731,13 @@ function MappingStep({onNext,onBack,uploadData,setMappingData}) {
         </div>
       </div>
 
-      {/* Score legend */}
+      {/* Hint banner */}
+      <div style={{background:`${C.purple}08`,border:`1px solid ${C.purple}20`,borderRadius:8,
+        padding:"8px 12px",marginBottom:14,fontSize:11,color:C.muted,display:"flex",gap:8,alignItems:"center"}}>
+        <span style={{color:C.purple}}>💡</span>
+        <span>Click any <strong style={{color:C.green}}>Auto</strong> or <strong style={{color:C.yellow}}>Review</strong> status badge to toggle it — force a field to Review if you want to double-check it in the next step.</span>
+      </div>
+
       {showComments&&(
         <HCard style={{marginBottom:16,background:`${C.cyan}06`,border:`1px solid ${C.cyan}25`}}>
           <div style={{fontSize:10,color:C.cyan,letterSpacing:.5,textTransform:"uppercase",marginBottom:10,fontWeight:600}}>
@@ -756,7 +767,7 @@ function MappingStep({onNext,onBack,uploadData,setMappingData}) {
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}}>
         <StatBox label="Total Fields" value={flat.length} color={C.blue}   tooltip="Total Benchling fields across all selected schemas"/>
         <StatBox label="Auto-Mapped"  value={auto}        color={C.green}  tooltip="Matched with ≥90% confidence — no action needed"/>
-        <StatBox label="Needs Review" value={review}      color={C.yellow} tooltip="Partial matches — verify before confirming"/>
+        <StatBox label="Needs Review" value={review}      color={C.yellow} tooltip="Partial matches or manually flagged — verify before confirming"/>
         <StatBox label="Unresolved"   value={missing}     color={C.red}    tooltip="No match found — assign manually in the next step"/>
       </div>
 
@@ -780,8 +791,12 @@ function MappingStep({onNext,onBack,uploadData,setMappingData}) {
             <thead>
               <tr style={{color:C.muted,borderBottom:`1px solid ${C.border}`}}>
                 {["Benchling Field","Your Column","Confidence & Score Reason",
-                  ...(showComments?["Mapping Comment"]:[]),"Status"].map(h=>(
-                  <th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:500}}>{h}</th>
+                  ...(showComments?["Mapping Comment"]:[]),
+                  "Status"].map(h=>(
+                  <th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:500,
+                    ...(h==="Status"?{whiteSpace:"nowrap"}:{})}}>{h}
+                    {h==="Status"&&<InfoBadge text="Click Auto or Review badges to toggle the status manually"/>}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -791,6 +806,7 @@ function MappingStep({onNext,onBack,uploadData,setMappingData}) {
                 const col=m.suggested_column||m.mapped||null;
                 const conf=m.confidence||m.conf||0;
                 const info=getConfidenceExplanation(conf,m.reason,field,col);
+                const canToggle=isToggleable(m.status);
                 return (
                   <tr key={i} style={{borderBottom:`1px solid ${C.border}33`,transition:"background .15s"}}
                     onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.02)"}
@@ -814,9 +830,37 @@ function MappingStep({onNext,onBack,uploadData,setMappingData}) {
                       </td>
                     )}
                     <td style={{padding:"8px"}}>
-                      <Tooltip text={m.reason}>
-                        <span><Tag color={sColor(m.status)}>{sLabel(m.status)}</Tag></span>
-                      </Tooltip>
+                      {canToggle?(
+                        <Tooltip text={
+                          m.status==="review"
+                            ? "Click to mark as Auto (trusted)"
+                            : "Click to flag for Review in the next step"
+                        }>
+                          {/* Clickable tag for toggleable statuses */}
+                          <span
+                            onClick={()=>toggleStatus(active,i)}
+                            style={{
+                              background:sColor(m.status)+"20",
+                              color:sColor(m.status),
+                              border:`1px solid ${sColor(m.status)}35`,
+                              borderRadius:4,padding:"2px 8px",fontSize:10,fontWeight:600,
+                              letterSpacing:.5,textTransform:"uppercase",whiteSpace:"nowrap",
+                              cursor:"pointer",userSelect:"none",
+                              display:"inline-flex",alignItems:"center",gap:5,
+                              transition:"all .15s",
+                            }}
+                            onMouseEnter={e=>{e.currentTarget.style.background=sColor(m.status)+"38";}}
+                            onMouseLeave={e=>{e.currentTarget.style.background=sColor(m.status)+"20";}}
+                          >
+                            {sLabel(m.status)}
+                            <span style={{fontSize:8,opacity:.7}}>⇄</span>
+                          </span>
+                        </Tooltip>
+                      ):(
+                        <Tooltip text={m.reason}>
+                          <span><Tag color={sColor(m.status)}>{sLabel(m.status)}</Tag></span>
+                        </Tooltip>
+                      )}
                     </td>
                   </tr>
                 );
@@ -838,10 +882,19 @@ function MappingStep({onNext,onBack,uploadData,setMappingData}) {
 function ReviewStep({onNext,onBack,mappingData,uploadData,setApprovedMapping}) {
   const [mapping,setMapping]=useState(mappingData||{});
   const [confirmed,setConfirmed]=useState({});
+  const [ignored,setIgnored]=useState({}); // { "schema|||idx": true }
   const [saving,setSaving]=useState(false);
   const [exported,setExported]=useState(false);
   const [error,setError]=useState(null);
   const cols=uploadData?.columns||[];
+
+  const ignoreKey=(schema,idx)=>`${schema}|||${idx}`;
+
+  const toggleIgnore=(schema,idx)=>{
+    const key=ignoreKey(schema,idx);
+    setIgnored(p=>({...p,[key]:!p[key]}));
+    setConfirmed(p=>({...p,[schema]:false}));
+  };
 
   const update=(schema,idx,col)=>{
     setMapping(prev=>{
@@ -850,40 +903,85 @@ function ReviewStep({onNext,onBack,mappingData,uploadData,setApprovedMapping}) {
       return u;
     });
     setConfirmed(p=>({...p,[schema]:false}));
+    // Un-ignore if the user picks a column
+    setIgnored(p=>({...p,[ignoreKey(schema,idx)]:false}));
   };
 
+  // A field "needs attention" if it's review/missing AND not ignored
   const flagged=Object.entries(mapping).flatMap(([schema,fields])=>
-    (fields||[]).filter(f=>f.status==="review"||f.status==="missing")
-      .map(f=>({schema,idx:(mapping[schema]||[]).indexOf(f),...f}))
+    (fields||[])
+      .map((f,idx)=>({schema,idx,globalIdx:idx,...f}))
+      .filter(f=>(f.status==="review"||f.status==="missing")&&!ignored[ignoreKey(f.schema,f.idx)])
   );
+
+  // Schema is OK to confirm if all its review/missing fields are either resolved or ignored
+  const schemaOk=(schema)=>{
+    const fields=mapping[schema]||[];
+    return fields.every((f,idx)=>
+      f.status!=="missing"&&f.status!=="review" ||
+      ignored[ignoreKey(schema,idx)]
+    );
+  };
+
   const allOk=Object.keys(mapping).length>0&&Object.keys(mapping).every(s=>confirmed[s]);
+
+  // Build final mapping to approve: mark ignored fields explicitly
+  const buildApproveMapping=()=>{
+    const result={};
+    Object.entries(mapping).forEach(([schema,fields])=>{
+      result[schema]=(fields||[]).map((f,idx)=>{
+        if(ignored[ignoreKey(schema,idx)]) return {...f,status:"ignored",suggested_column:null,mapped:null};
+        return f;
+      });
+    });
+    return result;
+  };
 
   const handleNext=async()=>{
     setSaving(true);
-    try{ await api.approve(mapping); setApprovedMapping(mapping); onNext(); }
+    try{
+      const approveMapping=buildApproveMapping();
+      await api.approve(approveMapping);
+      setApprovedMapping(approveMapping);
+      onNext();
+    }
     catch(e){ setError("Failed to save: "+e.message); }
     finally{ setSaving(false); }
   };
+
+  // Count ignored per schema
+  const ignoredCount=(schema)=>
+    (mapping[schema]||[]).filter((_,idx)=>ignored[ignoreKey(schema,idx)]).length;
 
   return (
     <div>
       <div style={{marginBottom:20}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
           <div style={{fontSize:11,color:C.purple,letterSpacing:.8,textTransform:"uppercase",fontWeight:600}}>Step 5 of 8</div>
-          <InfoBadge text="Resolve any flagged fields and confirm each schema. All confirmed mappings are saved for ingestion."/>
+          <InfoBadge text="Resolve flagged fields by assigning a column, or ignore them to skip during ingestion. Confirm each schema to proceed."/>
         </div>
         <div style={{fontSize:20,fontWeight:700,color:C.text,marginBottom:4}}>Review & Confirm</div>
-        <div style={{fontSize:12,color:C.textSub}}>Assign any unresolved fields then confirm each schema.</div>
+        <div style={{fontSize:12,color:C.textSub}}>Assign unresolved fields or ignore them, then confirm each schema.</div>
       </div>
       {error&&<Alert type="error" msg={error}/>}
-      {flagged.length>0&&(
+
+      {/* Flagged fields panel */}
+      {(flagged.length>0||Object.values(ignored).some(Boolean))&&(
         <HCard style={{marginBottom:14,border:`1px solid ${C.yellow}30`,background:`${C.yellow}05`}}>
-          <div style={{fontSize:10,color:C.yellow,letterSpacing:.5,textTransform:"uppercase",marginBottom:12,fontWeight:600}}>
-            {flagged.length} Field{flagged.length>1?"s":""} Require Attention
+          <div style={{fontSize:10,color:C.yellow,letterSpacing:.5,textTransform:"uppercase",marginBottom:12,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span>{flagged.length} Field{flagged.length!==1?"s":""} Require Attention</span>
+            {Object.values(ignored).filter(Boolean).length>0&&(
+              <Pill color={C.muted} sm>
+                {Object.values(ignored).filter(Boolean).length} ignored
+              </Pill>
+            )}
           </div>
+
+          {/* Active flagged fields */}
           {flagged.map((f,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:10,
-              padding:"9px 0",borderBottom:i<flagged.length-1?`1px solid ${C.border}44`:"none",flexWrap:"wrap"}}>
+            <div key={`${f.schema}-${f.idx}`}
+              style={{display:"flex",alignItems:"center",gap:10,
+                padding:"9px 0",borderBottom:`1px solid ${C.border}44`,flexWrap:"wrap"}}>
               <Tag color={C.blue}>{f.schema}</Tag>
               <code style={{color:C.cyan,fontSize:10,minWidth:130}}>{f.benchling_field||f.field}</code>
               <select onChange={e=>update(f.schema,f.idx,e.target.value)}
@@ -892,35 +990,84 @@ function ReviewStep({onNext,onBack,mappingData,uploadData,setApprovedMapping}) {
                 <option value="">— Select column —</option>
                 {cols.map(c=><option key={c} value={c}>{c}</option>)}
               </select>
-              <span style={{color:C.muted,fontSize:10}}>{f.reason}</span>
+              <span style={{color:C.muted,fontSize:10,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.reason}</span>
+              {/* Ignore button */}
+              <Tooltip text="Skip this field — it will be excluded from ingestion">
+                <button
+                  onClick={()=>toggleIgnore(f.schema,f.idx)}
+                  style={{background:"transparent",border:`1px solid ${C.muted}40`,
+                    borderRadius:6,padding:"4px 10px",cursor:"pointer",color:C.muted,
+                    fontSize:10,fontWeight:600,letterSpacing:.3,transition:"all .15s",
+                    display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=C.orange;e.currentTarget.style.color=C.orange;}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor=C.muted+"40";e.currentTarget.style.color=C.muted;}}
+                >
+                  ✕ Ignore
+                </button>
+              </Tooltip>
+            </div>
+          ))}
+
+          {/* Ignored fields (collapsed / summary) */}
+          {Object.entries(mapping).flatMap(([schema,fields])=>
+            (fields||[])
+              .map((f,idx)=>({schema,idx,...f}))
+              .filter(f=>ignored[ignoreKey(f.schema,f.idx)])
+          ).map((f,i,arr)=>(
+            <div key={`ign-${f.schema}-${f.idx}`}
+              style={{display:"flex",alignItems:"center",gap:10,
+                padding:"7px 0",borderBottom:i<arr.length-1?`1px solid ${C.border}22`:"none",
+                opacity:.5}}>
+              <Tag color={C.muted}>{f.schema}</Tag>
+              <code style={{color:C.muted,fontSize:10,flex:1}}>{f.benchling_field||f.field}</code>
+              <Pill color={C.muted} sm>Ignored</Pill>
+              <Tooltip text="Un-ignore this field">
+                <button
+                  onClick={()=>toggleIgnore(f.schema,f.idx)}
+                  style={{background:"transparent",border:`1px solid ${C.muted}30`,
+                    borderRadius:6,padding:"3px 8px",cursor:"pointer",color:C.muted,
+                    fontSize:10,fontWeight:600,transition:"all .15s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.color=C.green;e.currentTarget.style.borderColor=C.green;}}
+                  onMouseLeave={e=>{e.currentTarget.style.color=C.muted;e.currentTarget.style.borderColor=C.muted+"30";}}
+                >
+                  ↩ Restore
+                </button>
+              </Tooltip>
             </div>
           ))}
         </HCard>
       )}
+
+      {/* Schema confirm cards */}
       <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
         {Object.entries(mapping).map(([schema,fields])=>{
           const f=fields||[];
-          const missN=f.filter(x=>x.status==="missing").length;
+          const missN=f.filter((x,idx)=>(x.status==="missing")&&!ignored[ignoreKey(schema,idx)]).length;
+          const reviewN=f.filter((x,idx)=>(x.status==="review")&&!ignored[ignoreKey(schema,idx)]).length;
           const autoN=f.filter(x=>["auto","system","manual"].includes(x.status)).length;
-          const ok=missN===0; const done=confirmed[schema];
+          const ignN=ignoredCount(schema);
+          const ok=schemaOk(schema);
+          const done=confirmed[schema];
           return (
             <HCard key={schema} style={{border:`1px solid ${done?C.green+"40":ok?C.border:C.yellow+"25"}`}}>
               <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                 <div style={{flex:1}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     <span style={{fontWeight:600,color:C.text,fontSize:13}}>{schema}</span>
                     {done&&<Pill color={C.green}>✓ Confirmed</Pill>}
-                    {!ok&&<Pill color={C.yellow}>⚠ Unresolved</Pill>}
+                    {!ok&&(missN>0||reviewN>0)&&<Pill color={C.yellow}>⚠ Unresolved</Pill>}
                   </div>
                   <div style={{color:C.muted,fontSize:10,marginTop:2}}>
-                    {autoN}/{f.length} fields mapped{missN>0&&<span style={{color:C.yellow}}> · {missN} unresolved</span>}
+                    {autoN}/{f.length} fields mapped
+                    {(missN>0||reviewN>0)&&!ok&&<span style={{color:C.yellow}}> · {missN+reviewN} unresolved</span>}
+                    {ignN>0&&<span style={{color:C.muted}}> · {ignN} ignored</span>}
                   </div>
                 </div>
                 {!done&&(
                   <Btn sm color={ok?C.green:C.muted} disabled={!ok}
                     onClick={()=>setConfirmed(p=>({...p,[schema]:true}))}
-                    tooltip={ok?"Confirm this schema":"Resolve unmatched fields first"}>
-                    {ok?"Confirm ✓":"Resolve first"}
+                    tooltip={ok?"Confirm this schema":"Resolve or ignore all flagged fields first"}>
+                    {ok?"Confirm ✓":"Resolve or ignore first"}
                   </Btn>
                 )}
               </div>
@@ -928,6 +1075,7 @@ function ReviewStep({onNext,onBack,mappingData,uploadData,setApprovedMapping}) {
           );
         })}
       </div>
+
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",gap:8}}>
           <Btn ghost onClick={onBack}>← Back</Btn>
@@ -1339,7 +1487,6 @@ export default function App() {
           background:"radial-gradient(circle,rgba(14,164,114,0.04) 0%,transparent 70%)",borderRadius:"50%"}}/>
       </div>
       <div style={{position:"relative",zIndex:1,padding:"20px 24px",maxWidth:920,margin:"0 auto"}}>
-        {/* Header */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
           marginBottom:28,paddingBottom:16,borderBottom:`1px solid ${C.border}`}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -1352,7 +1499,6 @@ export default function App() {
           </div>
           <Tag color={C.cyan}>excelra.benchling.com</Tag>
         </div>
-        {/* Stepper */}
         <div style={{display:"flex",alignItems:"center",marginBottom:28}}>
           {STEPS.map((s,i)=>(
             <div key={i} style={{display:"flex",alignItems:"center",flex:i<STEPS.length-1?1:0}}>
@@ -1375,7 +1521,6 @@ export default function App() {
             </div>
           ))}
         </div>
-        {/* Main card */}
         <div style={{background:C.card,borderRadius:14,border:`1px solid ${C.border}`,padding:24,boxShadow:"0 20px 60px rgba(0,0,0,0.4)"}}>
           {step===0&&<NotebookStep        onNext={()=>setStep(1)}/>}
           {step===1&&<ImportStep          onNext={()=>setStep(2)} setUploadData={setUploadData} setErdData={setErdData}/>}

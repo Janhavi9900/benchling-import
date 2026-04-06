@@ -152,6 +152,18 @@ def find_existing_folder(name, parent_id):
     return None
 
 
+def get_project_id_for_folder(folder_id):
+    """Return the projectId for a folder — required for assay results."""
+    try:
+        key, base = _api_creds()
+        r = _requests.get(f"{base}/folders/{folder_id}", auth=(key, ""), timeout=15)
+        if r.status_code == 200:
+            return r.json().get("projectId")
+    except Exception:
+        pass
+    return None
+
+
 def _id(obj):
     """Extract id from SDK object or dict."""
     return getattr(obj, "id", None) or (obj.get("id") if isinstance(obj, dict) else None)
@@ -283,7 +295,8 @@ def main(file_path=None, mapping_file_path=None):
         if existing:
             logger.info(f"  Reusing '{name}': {existing}")
             folder_ids[cro]  = existing
-            project_ids[cro] = None
+            # Fetch projectId for this folder — needed for assay results
+            project_ids[cro] = get_project_id_for_folder(existing)
         else:
             obj = create_folder({"name": name, "parentFolderId": parent_folder_id})
             fid = _id(obj)

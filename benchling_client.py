@@ -354,27 +354,32 @@ def find_any_entity_by_name(name: str) -> str | None:
 
 def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -> Any:
     """
-    Fill a container with an entity using POST /containers/{id}/content.
+    Add a sample entity into a container.
+    Tries REST POST /containers/{id}/contents (Benchling correct endpoint).
     """
-    cfg = _load_config()
+    cfg     = _load_config()
     api_key = _resolve_api_key(cfg)
-    base_url = _rest_base_url(cfg)
-    url = f"{base_url}/containers/{container_id}/content"
+    base    = _rest_base_url(cfg)
 
     contents = snippet.get("contents", [])
+    if not contents:
+        return {}
+
     items = []
     for item in contents:
         entry = {"entityId": item.get("entityId")}
-        conc = item.get("concentration") or item.get("amount")
+        conc  = item.get("concentration") or item.get("amount")
         if conc:
             entry["concentration"] = conc
         items.append(entry)
 
-    payload = {"contents": items}
-    resp = requests.post(url, json=payload, auth=(api_key, ""))
+    # Try correct endpoint first (plural), then legacy (singular)
+    for url in [f"{base}/containers/{container_id}/contents",
+                f"{base}/containers/{container_id}/content"]:
+        resp = requests.post(url, json={"contents": items}, auth=(api_key, ""))
+        if resp.status_code in (200, 201, 202):
+            return resp.json() if resp.text else {}
+        if resp.status_code == 405:
+            continue
 
-    if resp.status_code in (200, 201, 202):
-        return resp.json() if resp.text else {}
-    else:
-        raise Exception(f"Container content transfer failed: {resp.status_code} - {resp.text}")
-
+    raise Exception(f"Container transfer failed: {resp.status_code} - {resp.text[:300]}")

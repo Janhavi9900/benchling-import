@@ -1283,29 +1283,44 @@ function ReportStep({onRestart}) {
     const records=[];
     const lines=content.split("\n");
     lines.forEach(line=>{
-      if(!line.includes("✅")&&!line.includes("Created")) return;
-      const idMatch=line.match(/(bfi_\w+|seq_\w+|con_\w+|etr_\w+)/);
+      if(!line.includes("✅")) return;
+      // Match any Benchling ID: bfi_, seq_, con_, etr_, loc_, box_
+      const idMatch=line.match(/(bfi_[\w]+|seq_[\w]+|con_[\w]+|etr_[\w]+|loc_[\w]+|box_[\w]+)/);
       if(!idMatch) return;
       let schema="Unknown";
-      if(line.toLowerCase().includes("dna"))                              schema="DNA Sequence";
-      else if(line.toLowerCase().includes("sample")||line.toLowerCase().includes("custom")) schema="Sample";
-      else if(line.toLowerCase().includes("container"))                   schema="Container";
-      else if(line.toLowerCase().includes("entry"))                       schema="Entry";
-      else if(line.toLowerCase().includes("result"))                      schema="Results";
-      const croMatch=line.match(/for CRO[:\s]+(\S+)/i);
-      records.push({ benchling_id:idMatch[1], schema, cro:croMatch?croMatch[1].replace(",",""):"—", status:"success" });
+      const ll=line.toLowerCase();
+      if(ll.includes("dna")||ll.includes("seq_"))          schema="DNA Sequence";
+      else if(ll.includes("sample")||ll.includes("bfi_"))  schema="Sample";
+      else if(ll.includes("container")||ll.includes("con_")) schema="Container";
+      else if(ll.includes("entry")||ll.includes("etr_"))   schema="Entry";
+      else if(ll.includes("result"))                        schema="Results";
+      else if(ll.includes("location")||ll.includes("loc_")) schema="Location";
+      else if(ll.includes("box_"))                          schema="Box";
+      const croMatch=line.match(/for CRO[:\s]+(\S+)/i)||line.match(/cro[:\s]+(\S+)/i);
+      const nameMatch=line.match(/name=([^,\s]+)/);
+      records.push({
+        benchling_id: idMatch[1],
+        schema,
+        cro:  croMatch  ? croMatch[1].replace(",","")  : "—",
+        name: nameMatch ? nameMatch[1] : "—",
+        status:"success"
+      });
     });
     const warnings=lines.filter(l=>l.includes("⚠")||l.toLowerCase().includes("warning"))
       .map(l=>l.replace(/.*⚠️?\s*/,"").trim()).filter(l=>l.length>5);
     const successMatch=content.match(/Successful\s*:\s*(\d+)/);
     const failedMatch=content.match(/Failed\s*:\s*(\d+)/);
-    const durationMatch=content.match(/Duration\s*:\s*(\w+)/);
     const dateMatch=content.match(/Run date\s*:\s*(.+)/);
-    return { records, warnings, success:content.includes("PIPELINE SUCCEEDED"),
-      successful:successMatch?parseInt(successMatch[1]):records.length,
-      failed:failedMatch?parseInt(failedMatch[1]):0,
-      duration:durationMatch?durationMatch[1]:"—",
-      run_date:dateMatch?dateMatch[1].trim():"—", raw:content };
+    const dataMatch=content.match(/Data file\s*:\s*(.+)/);
+    return {
+      records, warnings,
+      success:     content.includes("PIPELINE SUCCEEDED"),
+      successful:  successMatch ? parseInt(successMatch[1]) : records.filter(r=>r.schema==="Sample").length,
+      failed:      failedMatch  ? parseInt(failedMatch[1])  : 0,
+      run_date:    dateMatch    ? dateMatch[1].trim()        : "—",
+      data_file:   dataMatch    ? dataMatch[1].trim().split(/[\/\\]/).pop() : "—",
+      raw: content
+    };
   };
 
   const data=report?parseReport(report.content):null;
@@ -1314,9 +1329,13 @@ function ReportStep({onRestart}) {
     const w=window.open("","_blank");
     const now=new Date().toLocaleString();
     const recRows=(data?.records||[]).map(r=>`
-      <tr><td style="font-family:monospace;font-size:10px">${r.benchling_id}</td>
-      <td>${r.schema}</td><td>${r.cro}</td>
-      <td><span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600">CREATED</span></td></tr>`).join("");
+              <tr>
+                <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-size:11px;color:#6366f1">${r.benchling_id}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb">${r.name!=="—"?r.name:r.benchling_id}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb">${r.schema}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb">${r.cro}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#16a34a">✅ Success</td>
+              </tr>`).join("").join("");
     const warnRows=(data?.warnings||[]).map(w=>`
       <div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:11px">
         <span style="color:#d97706">⚠</span><span>${w}</span></div>`).join("");

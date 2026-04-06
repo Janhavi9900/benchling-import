@@ -354,16 +354,41 @@ def find_any_entity_by_name(name: str) -> str | None:
 
 def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -> Any:
     """
-    Add a sample entity into a container.
-    Tries REST POST /containers/{id}/contents (Benchling correct endpoint).
+    Add a sample entity into a container using the Benchling SDK.
+    Uses update_contents which sets the entity at the container level.
+    Falls back to REST if SDK call fails.
     """
-    cfg     = _load_config()
-    api_key = _resolve_api_key(cfg)
-    base    = _rest_base_url(cfg)
-
+    from benchling_sdk.models import ContainerContent, DeprecatedContainerVolumeForInput
+    
     contents = snippet.get("contents", [])
     if not contents:
         return {}
+
+    # Build SDK ContainerContent list
+    try:
+        client = _get_client()
+        sdk_contents = []
+        for item in contents:
+            entity_id = item.get("entityId")
+            if not entity_id:
+                continue
+            cc = ContainerContent(entity_id=entity_id)
+            sdk_contents.append(cc)
+        
+        if sdk_contents:
+            client.containers.update_contents(
+                container_id=container_id,
+                contents=sdk_contents,
+            )
+            return {"status": "ok", "method": "sdk"}
+    except Exception as sdk_err:
+        # SDK failed — fall through to REST
+        pass
+
+    # REST fallback — Benchling uses PATCH /containers/{id} with contents body
+    cfg     = _load_config()
+    api_key = _resolve_api_key(cfg)
+    base    = _rest_base_url(cfg)
 
     items = []
     for item in contents:
@@ -373,13 +398,20 @@ def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -
             entry["concentration"] = conc
         items.append(entry)
 
-    # Try correct endpoint first (plural), then legacy (singular)
-    for url in [f"{base}/containers/{container_id}/contents",
-                f"{base}/containers/{container_id}/content"]:
-        resp = requests.post(url, json={"contents": items}, auth=(api_key, ""))
-        if resp.status_code in (200, 201, 202):
-            return resp.json() if resp.text else {}
-        if resp.status_code == 405:
+    # Try all known Benchling container content endpoints
+    endpoints = [
+        (requests.patch, f"{base}/containers/{container_id}", {"contents": items}),
+        (requests.post,  f"{base}/containers/{container_id}/contents", {"contents": items}),
+        (requests.post,  f"{base}/containers/{container_id}/content",  {"contents": items}),
+    ]
+    last_err = None
+    for method, url, body in endpoints:
+        try:
+            resp = method(url, json=body, auth=(api_key, ""))
+            if resp.status_code in (200, 201, 202):
+                return resp.json() if resp.text else {}
+        except Exception as e:
+            last_err = e
             continue
 
-    raise Exception(f"Container transfer failed: {resp.status_code} - {resp.text[:300]}")
+    raise Exception(f"Container transfer failed after all attempts: {last_err}")

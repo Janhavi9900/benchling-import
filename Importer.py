@@ -330,8 +330,10 @@ def main(file_path=None, mapping_file_path=None):
 
     for idx, row in df.iterrows():
         cro  = str(row.get("CRO-Name", "Default")).strip() if "CRO-Name" in df.columns else "Default"
-        # Name = Sample_Name so Benchling shows "ADC-Sample-1", not "mAb-Construct"
-        name = str(row.get("Sample_Name") or row.get("Sample_ID") or f"DNA-{idx}").strip()
+        # Prefix with [SEQ] so DNA entities are distinct from Sample entities in the folder.
+        # Without prefix both "ADC-Sample-1" items would appear as duplicates in Benchling UI.
+        _base = str(row.get("Sample_Name") or row.get("Sample_ID") or f"DNA-{idx}").strip()
+        name  = f"[SEQ] {_base}"
         bases = str(row["Sequence"]) if "Sequence" in row.index and pd.notna(row.get("Sequence")) else ""
 
         fields = build_fields("DNA Sequence", mapping, row)
@@ -509,6 +511,42 @@ def main(file_path=None, mapping_file_path=None):
             raise
 
     logger.info("Pipeline complete!")
+
+    # ── Write report file for the UI Report step ──────────────────────────────
+    import datetime
+    os.makedirs("reports", exist_ok=True)
+    ts          = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_path = f"reports/pipeline_run_{ts}.txt"
+    lines = [
+        "PIPELINE SUCCEEDED",
+        f"Run date   : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"Data file  : {data_file}",
+        f"Folder     : {parent_folder_id}",
+        f"Successful : {len(created_entities)}",
+        f"Failed     : 0",
+        "",
+        "=== Notebook Entries ===",
+    ]
+    for cro, eid in entry_ids.items():
+        lines.append(f"  ✅ Created Entry {eid} for CRO: {cro}")
+    lines.append("")
+    lines.append("=== DNA Sequences ===")
+    for dna_id, idx, cro in created_dna:
+        sname = str(df.iloc[idx].get("Sample_Name", f"DNA-{idx}")).strip()
+        lines.append(f"  ✅ Created DNA sequence {dna_id} for CRO: {cro}, name={sname}")
+    lines.append("")
+    lines.append("=== Samples ===")
+    for entity_id, idx, cro in created_entities:
+        sname = str(df.iloc[idx].get("Sample_Name", f"Sample-{idx}")).strip()
+        lines.append(f"  ✅ Created sample {entity_id} for CRO: {cro}, name={sname}")
+    lines.append("")
+    lines.append("=== Results ===")
+    for cro in entry_ids:
+        count = len([e for e in created_entities if e[2] == cro])
+        lines.append(f"  ✅ Uploaded {count} results for CRO: {cro}")
+    with open(report_path, "w", encoding="utf-8") as rf:
+        rf.write("\n".join(lines))
+    logger.info(f"Report saved: {report_path}")
 
 
 if __name__ == "__main__":

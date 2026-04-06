@@ -354,30 +354,27 @@ def find_any_entity_by_name(name: str) -> str | None:
 
 def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -> Any:
     """
-    Fill a container with an entity by POSTing to the transfers endpoint.
-    Expects a snippet like: {"contents": [{"entityId": "...", "concentration": {...}}]}
+    Fill a container with an entity using POST /containers/{id}/content.
     """
     cfg = _load_config()
     api_key = _resolve_api_key(cfg)
     base_url = _rest_base_url(cfg)
-    url = f"{base_url}/transfers"
-    
+    url = f"{base_url}/containers/{container_id}/content"
+
     contents = snippet.get("contents", [])
-    transfers = []
+    items = []
     for item in contents:
-        # Benchling /transfers expects sourceEntityId and transferQuantity
-        qty = item.get("concentration") or item.get("amount") or {"value": 1, "units": "uL"}
-        transfers.append({
-            "sourceEntityId": item.get("entityId"),
-            "destinationContainerId": container_id,
-            "transferQuantity": qty
-        })
-    
-    payload = {"transfers": transfers}
+        entry = {"entityId": item.get("entityId")}
+        conc = item.get("concentration") or item.get("amount")
+        if conc:
+            entry["concentration"] = conc
+        items.append(entry)
+
+    payload = {"contents": items}
     resp = requests.post(url, json=payload, auth=(api_key, ""))
-    
+
     if resp.status_code in (200, 201, 202):
-        return resp.json()
+        return resp.json() if resp.text else {}
     else:
-        raise Exception(f"Transfer failed: {resp.status_code} - {resp.text}")
+        raise Exception(f"Container content transfer failed: {resp.status_code} - {resp.text}")
 

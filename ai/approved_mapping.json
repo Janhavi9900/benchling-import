@@ -173,13 +173,14 @@
     },
     {
       "benchling_field": "Entity linked",
-      "suggested_column": null,
-      "confidence": 0,
-      "reason": "No matching column found in uploaded file",
-      "status": "ignored",
+      "suggested_column": "Sample_Name",
+      "confidence": 95,
+      "reason": "Manually assigned",
+      "status": "manual",
       "benchling_type": "dna_sequence_link",
       "benchling_required": false,
-      "mapped": null
+      "mapped": "Sample_Name",
+      "conf": 95
     }
   ],
   "DNA Sequence": [
@@ -203,13 +204,14 @@
     },
     {
       "benchling_field": "External_Specimen_ID",
-      "suggested_column": null,
-      "confidence": 85,
-      "reason": "External specimen \u2192 Sample_Name",
-      "status": "ignored",
+      "suggested_column": "Sample_Name",
+      "confidence": 95,
+      "reason": "Manually assigned",
+      "status": "manual",
       "benchling_type": "text",
       "benchling_required": false,
-      "mapped": null
+      "mapped": "Sample_Name",
+      "conf": 95
     },
     {
       "benchling_field": "Host_System",
@@ -323,13 +325,14 @@
     },
     {
       "benchling_field": "linked_sample",
-      "suggested_column": null,
-      "confidence": 0,
-      "reason": "No matching column found in uploaded file",
-      "status": "ignored",
+      "suggested_column": "Sample_Name",
+      "confidence": 95,
+      "reason": "Manually assigned",
+      "status": "manual",
       "benchling_type": "entity_link",
       "benchling_required": false,
-      "mapped": null
+      "mapped": "Sample_Name",
+      "conf": 95
     }
   ],
   "Container": [

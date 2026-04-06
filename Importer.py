@@ -150,7 +150,13 @@ def resolve_schema_id(
 # PAYLOAD BUILDER — approved_mapping.json driven
 # ══════════════════════════════════════════════════════════════════════════════
 
+# Fields resolved at runtime — never sent from the mapping
 _RUNTIME_FIELDS = {"entity linked", "linked_sample", "entity_linked"}
+
+# Fields that represent folder/org structure — Benchling handles these via
+# folderId/entryId, not as schema field values. Sending them causes 400 errors
+# when the Benchling field type (e.g. integer) doesn't match the text value.
+_STRUCTURAL_FIELDS = {"cro", "folder", "folderid", "projectid"}
 
 
 def _coerce(raw: Any) -> Any:
@@ -169,6 +175,26 @@ def _coerce(raw: Any) -> Any:
     return raw
 
 
+def _type_matches(val: Any, benchling_type: str) -> bool:
+    """
+    Return False if the value will definitely be rejected by Benchling
+    due to a type mismatch — e.g. sending "CRO-A" into an integer field.
+    """
+    if benchling_type == "integer":
+        try:
+            int(str(val).strip())
+            return True
+        except (ValueError, TypeError):
+            return False   # non-numeric string into integer field → skip it
+    if benchling_type == "float":
+        try:
+            float(str(val).strip())
+            return True
+        except (ValueError, TypeError):
+            return False
+    return True   # text / date / entity_link — always attempt
+
+
 def build_fields(
     schema_key: str,
     mapping: Dict,
@@ -177,17 +203,28 @@ def build_fields(
     """
     Build a Benchling fields dict from approved_mapping + one data row.
     Returns: { "FieldName": {"value": <value>}, ... }
-    Skips: ignored entries, missing columns, runtime-resolved links.
+
+    Skips:
+      - ignored entries
+      - runtime-resolved entity links (Entity linked, linked_sample)
+      - structural fields handled via folderId/entryId (CRO, folder, etc.)
+      - type-mismatched values (e.g. "CRO-A" into an integer field)
+      - missing columns
     """
     out = {}
     for entry in mapping.get(schema_key, []):
-        bf     = entry.get("benchling_field", "")
-        col    = entry.get("suggested_column") or entry.get("mapped")
-        status = entry.get("status", "")
+        bf            = entry.get("benchling_field", "")
+        col           = entry.get("suggested_column") or entry.get("mapped")
+        status        = entry.get("status", "")
+        benchling_type = entry.get("benchling_type", "text")
 
         if status == "ignored":
             continue
+        # Skip runtime-resolved links
         if bf.lower().replace(" ", "_") in _RUNTIME_FIELDS or bf.lower() in _RUNTIME_FIELDS:
+            continue
+        # Skip structural/org fields that conflict with folder structure
+        if bf.lower().replace(" ", "_") in _STRUCTURAL_FIELDS or bf.lower() in _STRUCTURAL_FIELDS:
             continue
         if not col or col not in row.index:
             continue
@@ -195,6 +232,15 @@ def build_fields(
         val = _coerce(row[col])
         if val is None:
             continue
+
+        # Skip if value type doesn't match Benchling field type
+        if not _type_matches(val, benchling_type):
+            logger.warning(
+                f"  Skipping field '{bf}' — value '{val}' is not valid "
+                f"for Benchling type '{benchling_type}'"
+            )
+            continue
+
         out[bf] = {"value": val}
 
     return out

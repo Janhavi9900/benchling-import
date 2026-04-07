@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import os
 from typing import Any, Dict, Optional
+from benchling_api_client.v2.stable.models.container_quantity import ContainerQuantity
+from benchling_api_client.v2.stable.models.container_quantity_units import ContainerQuantityUnits
+
 
 import requests
 from benchling_sdk.auth.api_key_auth import ApiKeyAuth
@@ -246,9 +249,17 @@ def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -
         **({"concentration": conc_obj} if conc_obj is not UNSET else {}),
     )
 
+
+    # transferQuantity is REQUIRED by Benchling API
+    transfer_qty = ContainerQuantity(
+        value=float(conc_data.get("value", 1.0)) if conc_data else 1.0,
+        units=ContainerQuantityUnits("mg"),
+    )
+
     transfer = ContainerTransfer(
         destination_contents=[dest_item],
         source_entity_id=entity_id,
+        transfer_quantity=transfer_qty,
     )
 
     client = _get_client()

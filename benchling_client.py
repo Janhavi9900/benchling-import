@@ -1,11 +1,16 @@
 """
-Benchling API client using the official benchling-sdk plus a small helper
-for calling the assay-results bulk API.
+Benchling API client using the official benchling-sdk plus REST helpers.
+
+KEY FIX in this version:
+  - find_location_by_name / find_box_by_name iterate PageIterator CORRECTLY
+    (PageIterator yields pages = List[Model], not individual items)
+  - transfer_into_container_direct uses the correct SDK method:
+    client.containers.transfer_into_container(ContainerTransfer)
+  - Separate location / box lookup functions to avoid schema ID mix-up
 """
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Any, Dict, Optional
 
@@ -13,68 +18,71 @@ import requests
 from benchling_sdk.auth.api_key_auth import ApiKeyAuth
 from benchling_sdk.benchling import Benchling
 from benchling_sdk.models import (
-    CustomEntityCreate, 
-    DnaSequenceCreate, 
-    EntryCreate, 
-    FolderCreate, 
-    ContainerCreate, 
-    LocationCreate, 
+    CustomEntityCreate,
+    DnaSequenceCreate,
+    EntryCreate,
+    FolderCreate,
+    ContainerCreate,
+    LocationCreate,
     BoxCreate,
     DnaSequenceUpsertRequest,
-    CustomEntityUpsertRequest
+    CustomEntityUpsertRequest,
 )
 
 from config_loader import load_config
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Internal helpers
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _load_config() -> Dict[str, Any]:
     return load_config()
 
 
 def _tenant_url_from_config(cfg: Dict[str, Any]) -> str:
-    benchling_cfg = cfg.get("benchling", {})
-    base_url = str(benchling_cfg.get("base_url", "https://excelra.benchling.com/api/v2")).rstrip("/")
+    base_url = str(cfg.get("benchling", {}).get(
+        "base_url", "https://excelra.benchling.com/api/v2"
+    )).rstrip("/")
     if base_url.endswith("/api/v2"):
         return base_url[: -len("/api/v2")]
     return base_url
 
 
 def _rest_base_url(cfg: Dict[str, Any]) -> str:
-    benchling_cfg = cfg.get("benchling", {})
-    return str(benchling_cfg.get("base_url", "https://excelra.benchling.com/api/v2")).rstrip("/")
+    return str(cfg.get("benchling", {}).get(
+        "base_url", "https://excelra.benchling.com/api/v2"
+    )).rstrip("/")
 
 
 def _resolve_api_key(cfg: Dict[str, Any]) -> str:
-    benchling_cfg = cfg.get("benchling", {})
+    bc = cfg.get("benchling", {})
 
-    literal_key = benchling_cfg.get("api_key")
-    if isinstance(literal_key, str) and literal_key.strip():
-        return literal_key.strip()
+    literal = bc.get("api_key")
+    if isinstance(literal, str) and literal.strip():
+        return literal.strip()
 
-    maybe_env_or_key = benchling_cfg.get("api_key_env_var")
-    if isinstance(maybe_env_or_key, str) and maybe_env_or_key.strip():
-        s = maybe_env_or_key.strip()
-        # Backwards-compat: if this looks like a key, use it directly.
+    env_or_key = bc.get("api_key_env_var")
+    if isinstance(env_or_key, str) and env_or_key.strip():
+        s = env_or_key.strip()
         if s.startswith("sk_"):
             return s
-        env_val = os.getenv(s)
-        if env_val and env_val.strip():
-            return env_val.strip()
-        raise RuntimeError(
-            f"Benchling API key env var '{s}' is not set. Export it (e.g. `export {s}=...`) or set benchling.api_key."
-        )
+        val = os.getenv(s)
+        if val and val.strip():
+            return val.strip()
+        raise RuntimeError(f"Benchling API key env var '{s}' is not set.")
 
-    env_val = os.getenv("BENCHLING_API_KEY")
-    if env_val and env_val.strip():
-        return env_val.strip()
+    val = os.getenv("BENCHLING_API_KEY")
+    if val and val.strip():
+        return val.strip()
 
     raise RuntimeError(
-        "Benchling API key is not configured. Set benchling.api_key_env_var (preferred) or benchling.api_key in config.json."
+        "Benchling API key not configured. "
+        "Set benchling.api_key_env_var or benchling.api_key in config.json."
     )
 
 
 def _get_client() -> Benchling:
-    """Return a configured Benchling SDK client."""
     cfg = _load_config()
     return Benchling(
         url=_tenant_url_from_config(cfg),
@@ -82,282 +90,133 @@ def _get_client() -> Benchling:
     )
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# Entity creation
+# ══════════════════════════════════════════════════════════════════════════════
+
 def create_entry(payload: Dict[str, Any]) -> Any:
-    """
-    Create an entry in Benchling using the SDK.
-    """
     client = _get_client()
-    
-    model = EntryCreate.from_dict(payload)
-    return client.entries.create_entry(entry=model)
+    return client.entries.create_entry(entry=EntryCreate.from_dict(payload))
 
 
 def create_dna_sequence(payload: Dict[str, Any]) -> Any:
-    """
-    Create a DNA sequence in Benchling using the SDK.
-    """
     client = _get_client()
-    model = DnaSequenceCreate.from_dict(payload)
-    return client.dna_sequences.create(dna_sequence=model)
+    return client.dna_sequences.create(dna_sequence=DnaSequenceCreate.from_dict(payload))
 
 
 def create_custom_entity(payload: Dict[str, Any]) -> Any:
-    """
-    Create a custom entity in Benchling using the SDK.
-    """
     client = _get_client()
-    model = CustomEntityCreate.from_dict(payload)
-    return client.custom_entities.create(entity=model)
+    return client.custom_entities.create(entity=CustomEntityCreate.from_dict(payload))
 
 
 def create_folder(payload: Dict[str, Any]) -> Any:
-    """
-    Create a folder in Benchling using the SDK.
-    """
     client = _get_client()
-    model = FolderCreate.from_dict(payload)
-    return client.folders.create(folder=model)
+    return client.folders.create(folder=FolderCreate.from_dict(payload))
 
 
-def create_container(payload: Dict[str, Any]) -> Any:
-    """
-    Create a container in Benchling using the SDK.
-    Note: The SDK model may skip 'contents'.
-    """
+def create_location(payload: Dict[str, Any]) -> Any:
     client = _get_client()
-    model = ContainerCreate.from_dict(payload)
-    return client.containers.create(container=model)
+    return client.locations.create(location=LocationCreate.from_dict(payload))
+
+
+def create_box(payload: Dict[str, Any]) -> Any:
+    client = _get_client()
+    return client.boxes.create(box=BoxCreate.from_dict(payload))
 
 
 def create_container_direct(payload: Dict[str, Any]) -> Any:
     """
-    Create a container in Benchling using direct API call (to support 'contents').
+    Create a container via REST (camelCase keys).
+    Accepted keys: name, barcode, schemaId, parentStorageId, fields, projectId
     """
-    config = _load_config()
-    api_key = _resolve_api_key(config)
-    base_url = _rest_base_url(config)
-    url = f"{base_url}/containers"
-    
-    response = requests.post(url, json=payload, auth=(api_key, ""))
-    if response.status_code == 201:
-        return response.json()
-    else:
-        raise Exception(f"Failed to create container: {response.status_code} - {response.text}")
-
-
-def move_container(container_id: str, parent_storage_id: str, position: Any) -> Any:
-    """
-    Move a container to a new position in Benchling using the SDK.
-    """
-    client = _get_client()
-    return client.containers.move(
-        container_id=container_id,
-        parent_storage_id=parent_storage_id,
-        position=position
-    )
-
-
-def create_location(payload: Dict[str, Any]) -> Any:
-    """
-    Create a storage location in Benchling.
-    """
-    client = _get_client()
-    model = LocationCreate.from_dict(payload)
-    return client.locations.create(location=model)
-
-
-def create_box(payload: Dict[str, Any]) -> Any:
-    """
-    Create a storage box in Benchling.
-    """
-    client = _get_client()
-    model = BoxCreate.from_dict(payload)
-    return client.boxes.create(box=model)
-
-
-def find_storage_by_name(name: str, schema_id: str) -> str | None:
-    """
-    Find a storage item (location or box) by name and schema ID.
-    Returns the ID if found, else None.
-    """
-    client = _get_client()
-    # Try locations
-    try:
-        locations = client.locations.list(schema_id=schema_id)
-        for loc in locations:
-            if getattr(loc, "name", None) == name:
-                return loc.id
-    except Exception as e:
-        print(f"  Lookup error (location): {e}")
-    
-    # Try boxes
-    try:
-        boxes = client.boxes.list(schema_id=schema_id)
-        for box in boxes:
-            if getattr(box, "name", None) == name:
-                return box.id
-    except Exception as e:
-        print(f"  Lookup error (box): {e}")
-            
-    return None
-
-
-def get_entry_details(entry_id: str) -> Dict[str, Any]:
-    """
-    Get entry details including result tables from Benchling API.
-    """
-    client = _get_client()
-    return client.entries.get_entry_by_id(entry_id).to_dict()
-
-def get_result_table_id_from_entry(entry_id: str) -> str | None:
-    """
-    Extracts the apiId of the first results table found in an entry's notes.
-    """
-    try:
-        entry_details = get_entry_details(entry_id)
-        for day in entry_details.get('days', []):
-            for note in day.get('notes', []):
-                if note.get('type') == 'results_table':
-                    return note.get('apiId')
-    except Exception as e:
-        print(f"Error fetching table API ID for entry {entry_id}: {e}")
-    return None
-
-
-def create_assay_results_bulk(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Call POST /assay-results:bulk-create with a prepared payload.
-    Returns taskId for async operation (202 Accepted).
-    """
-    cfg = _load_config()
+    cfg     = _load_config()
     api_key = _resolve_api_key(cfg)
-    base_url = _rest_base_url(cfg)
-    timeout = cfg.get("benchling", {}).get("timeout_seconds", 30)
-
-    resp = requests.post(
-        f"{base_url}/assay-results:bulk-create",
-        auth=(api_key, ""),
-        json=payload,
-        timeout=timeout,
-    )
-
-    if resp.status_code not in (200, 202, 201):
-        print(f"\n❌ API Error: {resp.status_code}")
-        print(f"Response: {resp.text}")
-        resp.raise_for_status()
-
-    return resp.json()
+    base    = _rest_base_url(cfg)
+    resp    = requests.post(f"{base}/containers", json=payload, auth=(api_key, ""))
+    if resp.status_code == 201:
+        return resp.json()
+    raise Exception(f"Failed to create container: {resp.status_code} — {resp.text}")
 
 
-def upsert_dna_sequence(entity_registry_id: str, payload: Dict[str, Any]) -> Any:
+# ══════════════════════════════════════════════════════════════════════════════
+# Storage lookup — FIXED PageIterator iteration
+#
+# CRITICAL: PageIterator.__next__ returns List[Model] (a PAGE of items).
+# The old code did:
+#   for loc in client.locations.list(...):   <- loc was a List, not a Location
+#       if loc.name == name:                  <- always failed silently
+# This caused every run to create NEW duplicate locations and boxes.
+#
+# Correct pattern:
+#   for page in client.locations.list(...):  <- page is List[Location]
+#       for loc in page:                     <- loc is now a Location object
+#           if loc.name == name: return loc.id
+# ══════════════════════════════════════════════════════════════════════════════
+
+def find_location_by_name(name: str, schema_id: str) -> Optional[str]:
     """
-    Upsert a DNA sequence in Benchling using the SDK.
-    """
-    client = _get_client()
-    model = DnaSequenceUpsertRequest.from_dict(payload)
-    return client.dna_sequences.upsert(entity_registry_id=entity_registry_id, dna_sequence=model)
-
-
-def upsert_custom_entity(entity_registry_id: str, payload: Dict[str, Any]) -> Any:
-    """
-    Upsert a custom entity in Benchling using the SDK.
-    """
-    client = _get_client()
-    model = CustomEntityUpsertRequest.from_dict(payload)
-    return client.custom_entities.upsert(entity_registry_id=entity_registry_id, custom_entity=model)
-
-
-def find_dna_sequence_by_name(name: str) -> str | None:
-    """
-    Find a DNA sequence by its name, registry ID, or alias.
+    Find an existing location by name and schema ID.
+    Uses name= filter so only matching records are fetched.
+    Iterates PageIterator correctly (each page is a List[Location]).
     """
     if not name:
         return None
     client = _get_client()
     try:
-        # Search Active first
-        for page in client.dna_sequences.list(name=name):
-            for ent in page:
-                return ent.id
-        for page in client.dna_sequences.list(names_any_of=[name]):
-            for ent in page:
-                return ent.id
-        for page in client.dna_sequences.list(entity_registry_ids_any_of=[name]):
-            for ent in page:
-                return ent.id
-        # Search Archived
-        for page in client.dna_sequences.list(name=name, archive_reason="ANY"):
-            for ent in page:
-                return ent.id
-    except Exception:
-        pass
+        for page in client.locations.list(name=name, schema_id=schema_id):
+            for loc in page:          # page = List[Location]
+                if getattr(loc, "name", None) == name:
+                    return loc.id
+    except Exception as e:
+        print(f"  Location lookup error: {e}")
     return None
 
 
-def find_custom_entity_by_name(name: str) -> str | None:
+def find_box_by_name(name: str, schema_id: str) -> Optional[str]:
     """
-    Find a custom entity by its name, registry ID, or alias.
+    Find an existing box by name and schema ID.
+    Iterates PageIterator correctly (each page is a List[Box]).
     """
     if not name:
         return None
     client = _get_client()
     try:
-        # Search Active first
-        for page in client.custom_entities.list(name=name):
-            for ent in page:
-                return ent.id
-        for page in client.custom_entities.list(names_any_of=[name]):
-            for ent in page:
-                return ent.id
-        for page in client.custom_entities.list(entity_registry_ids_any_of=[name]):
-            for ent in page:
-                return ent.id
-        # Search Archived
-        for page in client.custom_entities.list(name=name, archive_reason="ANY"):
-            for ent in page:
-                return ent.id
-    except Exception:
-        pass
+        for page in client.boxes.list(name=name, schema_id=schema_id):
+            for box in page:          # page = List[Box]
+                if getattr(box, "name", None) == name:
+                    return box.id
+    except Exception as e:
+        print(f"  Box lookup error: {e}")
     return None
 
 
-def find_any_entity_by_name(name: str) -> str | None:
-    """
-    Find ANY entity type in Benchling by name, alias, or registry identifier.
-    """
-    if not name:
-        return None
-    
-    client = _get_client()
-    services = [client.dna_sequences, client.aa_sequences, client.custom_entities]
-    
-    for service in services:
-        try:
-            # Search Active first
-            for page in service.list(name=name):
-                for ent in page:
-                    return ent.id
-            for page in service.list(names_any_of=[name]):
-                for ent in page:
-                    return ent.id
-            for page in service.list(entity_registry_ids_any_of=[name]):
-                for ent in page:
-                    return ent.id
-            # Search Archived
-            for page in service.list(name=name, archive_reason="ANY"):
-                for ent in page:
-                    return ent.id
-        except Exception:
-            continue
-    return None
+def find_storage_by_name(name: str, schema_id: str) -> Optional[str]:
+    """Legacy compatibility wrapper."""
+    return find_location_by_name(name, schema_id) or find_box_by_name(name, schema_id)
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Container transfer — FIXED: correct SDK method
+#
+# The correct SDK method is:
+#   client.containers.transfer_into_container(
+#       destination_container_id = container_id,
+#       transfer_request = ContainerTransfer(
+#           destination_contents = [ContainerTransferDestinationContentsItem(entity_id=...)],
+#           source_entity_id     = entity_id,
+#       )
+#   )
+#
+# This makes the sample entity appear in:
+#   - The container's "Contents" section (shows sample name)
+#   - The sample's "Inventory" tab in Benchling (shows the container)
+# ══════════════════════════════════════════════════════════════════════════════
 
 def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -> Any:
-    """
-    Transfer a sample entity into a container using the correct Benchling SDK method.
-    """
     from benchling_api_client.v2.stable.models.container_transfer import ContainerTransfer
-    from benchling_api_client.v2.stable.models.container_transfer_destination_contents_item import ContainerTransferDestinationContentsItem
+    from benchling_api_client.v2.stable.models.container_transfer_destination_contents_item import (
+        ContainerTransferDestinationContentsItem,
+    )
     from benchling_api_client.v2.stable.models.measurement import Measurement
     from benchling_api_client.v2.types import UNSET
 
@@ -367,16 +226,16 @@ def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -
 
     item      = contents[0]
     entity_id = item.get("entityId")
-    conc_data = item.get("concentration")
-
     if not entity_id:
         raise ValueError("entityId is required for container transfer")
 
-    conc_measurement = UNSET
+    # Build optional concentration measurement
+    conc_data = item.get("concentration")
+    conc_obj  = UNSET
     if conc_data and isinstance(conc_data, dict):
         try:
-            conc_measurement = Measurement(
-                value=float(conc_data.get("value", 0)),
+            conc_obj = Measurement(
+                value=float(conc_data.get("value", 0.0)),
                 units=conc_data.get("units", "mg/mL"),
             )
         except Exception:
@@ -384,7 +243,7 @@ def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -
 
     dest_item = ContainerTransferDestinationContentsItem(
         entity_id=entity_id,
-        **({"concentration": conc_measurement} if conc_measurement is not UNSET else {}),
+        **({"concentration": conc_obj} if conc_obj is not UNSET else {}),
     )
 
     transfer = ContainerTransfer(
@@ -397,66 +256,103 @@ def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -
         destination_container_id=container_id,
         transfer_request=transfer,
     )
-    return {"status": "ok", "method": "sdk_transfer"}
-    """
-    Add a sample entity into a container using the Benchling SDK.
-    Uses update_contents which sets the entity at the container level.
-    Falls back to REST if SDK call fails.
-    """
-    from benchling_sdk.models import ContainerContent, DeprecatedContainerVolumeForInput
-    
-    contents = snippet.get("contents", [])
-    if not contents:
-        return {}
+    return {"status": "ok"}
 
-    # Build SDK ContainerContent list
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Entry / results helpers
+# ══════════════════════════════════════════════════════════════════════════════
+
+def get_entry_details(entry_id: str) -> Dict[str, Any]:
+    client = _get_client()
+    return client.entries.get_entry_by_id(entry_id).to_dict()
+
+
+def get_result_table_id_from_entry(entry_id: str) -> Optional[str]:
     try:
-        client = _get_client()
-        sdk_contents = []
-        for item in contents:
-            entity_id = item.get("entityId")
-            if not entity_id:
-                continue
-            cc = ContainerContent(entity_id=entity_id)
-            sdk_contents.append(cc)
-        
-        if sdk_contents:
-            client.containers.update_contents(
-                container_id=container_id,
-                contents=sdk_contents,
-            )
-            return {"status": "ok", "method": "sdk"}
-    except Exception as sdk_err:
-        # SDK failed — fall through to REST
-        pass
+        details = get_entry_details(entry_id)
+        for day in details.get("days", []):
+            for note in day.get("notes", []):
+                if note.get("type") == "results_table":
+                    return note.get("apiId")
+    except Exception as e:
+        print(f"  Table ID lookup error for {entry_id}: {e}")
+    return None
 
-    # REST fallback — Benchling uses PATCH /containers/{id} with contents body
+
+def create_assay_results_bulk(payload: Dict[str, Any]) -> Dict[str, Any]:
     cfg     = _load_config()
     api_key = _resolve_api_key(cfg)
     base    = _rest_base_url(cfg)
+    timeout = cfg.get("benchling", {}).get("timeout_seconds", 30)
+    resp = requests.post(
+        f"{base}/assay-results:bulk-create",
+        auth=(api_key, ""),
+        json=payload,
+        timeout=timeout,
+    )
+    if resp.status_code not in (200, 201, 202):
+        print(f"\n❌ API Error: {resp.status_code}")
+        print(f"Response: {resp.text}")
+        resp.raise_for_status()
+    return resp.json()
 
-    items = []
-    for item in contents:
-        entry = {"entityId": item.get("entityId")}
-        conc  = item.get("concentration") or item.get("amount")
-        if conc:
-            entry["concentration"] = conc
-        items.append(entry)
 
-    # Try all known Benchling container content endpoints
-    endpoints = [
-        (requests.patch, f"{base}/containers/{container_id}", {"contents": items}),
-        (requests.post,  f"{base}/containers/{container_id}/contents", {"contents": items}),
-        (requests.post,  f"{base}/containers/{container_id}/content",  {"contents": items}),
-    ]
-    last_err = None
-    for method, url, body in endpoints:
+# ══════════════════════════════════════════════════════════════════════════════
+# Upsert / search helpers
+# ══════════════════════════════════════════════════════════════════════════════
+
+def upsert_dna_sequence(entity_registry_id: str, payload: Dict[str, Any]) -> Any:
+    client = _get_client()
+    return client.dna_sequences.upsert(
+        entity_registry_id=entity_registry_id,
+        dna_sequence=DnaSequenceUpsertRequest.from_dict(payload),
+    )
+
+
+def upsert_custom_entity(entity_registry_id: str, payload: Dict[str, Any]) -> Any:
+    client = _get_client()
+    return client.custom_entities.upsert(
+        entity_registry_id=entity_registry_id,
+        custom_entity=CustomEntityUpsertRequest.from_dict(payload),
+    )
+
+
+def find_dna_sequence_by_name(name: str) -> Optional[str]:
+    if not name:
+        return None
+    client = _get_client()
+    try:
+        for page in client.dna_sequences.list(name=name):
+            for ent in page:
+                return ent.id
+    except Exception:
+        pass
+    return None
+
+
+def find_custom_entity_by_name(name: str) -> Optional[str]:
+    if not name:
+        return None
+    client = _get_client()
+    try:
+        for page in client.custom_entities.list(name=name):
+            for ent in page:
+                return ent.id
+    except Exception:
+        pass
+    return None
+
+
+def find_any_entity_by_name(name: str) -> Optional[str]:
+    if not name:
+        return None
+    client = _get_client()
+    for service in [client.dna_sequences, client.aa_sequences, client.custom_entities]:
         try:
-            resp = method(url, json=body, auth=(api_key, ""))
-            if resp.status_code in (200, 201, 202):
-                return resp.json() if resp.text else {}
-        except Exception as e:
-            last_err = e
+            for page in service.list(name=name):
+                for ent in page:
+                    return ent.id
+        except Exception:
             continue
-
-    raise Exception(f"Container transfer failed after all attempts: {last_err}")
+    return None

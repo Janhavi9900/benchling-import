@@ -354,6 +354,51 @@ def find_any_entity_by_name(name: str) -> str | None:
 
 def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -> Any:
     """
+    Transfer a sample entity into a container using the correct Benchling SDK method.
+    """
+    from benchling_api_client.v2.stable.models.container_transfer import ContainerTransfer
+    from benchling_api_client.v2.stable.models.container_transfer_destination_contents_item import ContainerTransferDestinationContentsItem
+    from benchling_api_client.v2.stable.models.measurement import Measurement
+    from benchling_api_client.v2.types import UNSET
+
+    contents = snippet.get("contents", [])
+    if not contents:
+        return {}
+
+    item      = contents[0]
+    entity_id = item.get("entityId")
+    conc_data = item.get("concentration")
+
+    if not entity_id:
+        raise ValueError("entityId is required for container transfer")
+
+    conc_measurement = UNSET
+    if conc_data and isinstance(conc_data, dict):
+        try:
+            conc_measurement = Measurement(
+                value=float(conc_data.get("value", 0)),
+                units=conc_data.get("units", "mg/mL"),
+            )
+        except Exception:
+            pass
+
+    dest_item = ContainerTransferDestinationContentsItem(
+        entity_id=entity_id,
+        **({"concentration": conc_measurement} if conc_measurement is not UNSET else {}),
+    )
+
+    transfer = ContainerTransfer(
+        destination_contents=[dest_item],
+        source_entity_id=entity_id,
+    )
+
+    client = _get_client()
+    client.containers.transfer_into_container(
+        destination_container_id=container_id,
+        transfer_request=transfer,
+    )
+    return {"status": "ok", "method": "sdk_transfer"}
+    """
     Add a sample entity into a container using the Benchling SDK.
     Uses update_contents which sets the entity at the container level.
     Falls back to REST if SDK call fails.

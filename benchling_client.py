@@ -251,8 +251,9 @@ def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -
 
 
     # transferQuantity is REQUIRED by Benchling API
+
     transfer_qty = ContainerQuantity(
-        value=float(conc_data.get("value", 1.0)) if conc_data else 1.0,
+        value=1.0,
         units=ContainerQuantityUnits("mg"),
     )
 

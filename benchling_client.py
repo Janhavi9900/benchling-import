@@ -1,23 +1,29 @@
 """
-Benchling API client using the official benchling-sdk plus REST helpers.
+Benchling API client — clean final version.
 
-KEY FIX in this version:
-  - find_location_by_name / find_box_by_name iterate PageIterator CORRECTLY
-    (PageIterator yields pages = List[Model], not individual items)
-  - transfer_into_container_direct uses the correct SDK method:
-    client.containers.transfer_into_container(ContainerTransfer)
-  - Separate location / box lookup functions to avoid schema ID mix-up
+transfer_into_container_direct:
+  - Uses SDK transfer_into_container with ContainerTransfer
+  - transferQuantity = 1.0 mg  (REQUIRED by Benchling)
+  - NO concentration on dest_item (Benchling only accepts molar units for concentration)
+  - Valid concentration units are molar-based: M, nM, uM, mM only
+
+find_location_by_name / find_box_by_name:
+  - PageIterator yields pages (List[Model]), not individual items
+  - Correct two-level iteration: for page in .list(): for item in page:
 """
 
 from __future__ import annotations
 
 import os
 from typing import Any, Dict, Optional
-from benchling_api_client.v2.stable.models.container_quantity import ContainerQuantity
-from benchling_api_client.v2.stable.models.container_quantity_units import ContainerQuantityUnits
-
 
 import requests
+from benchling_api_client.v2.stable.models.container_quantity import ContainerQuantity
+from benchling_api_client.v2.stable.models.container_quantity_units import ContainerQuantityUnits
+from benchling_api_client.v2.stable.models.container_transfer import ContainerTransfer
+from benchling_api_client.v2.stable.models.container_transfer_destination_contents_item import (
+    ContainerTransferDestinationContentsItem,
+)
 from benchling_sdk.auth.api_key_auth import ApiKeyAuth
 from benchling_sdk.benchling import Benchling
 from benchling_sdk.models import (
@@ -35,9 +41,7 @@ from benchling_sdk.models import (
 from config_loader import load_config
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Internal helpers
-# ══════════════════════════════════════════════════════════════════════════════
+# ── Internal helpers ───────────────────────────────────────────────────────────
 
 def _load_config() -> Dict[str, Any]:
     return load_config()
@@ -60,11 +64,9 @@ def _rest_base_url(cfg: Dict[str, Any]) -> str:
 
 def _resolve_api_key(cfg: Dict[str, Any]) -> str:
     bc = cfg.get("benchling", {})
-
     literal = bc.get("api_key")
     if isinstance(literal, str) and literal.strip():
         return literal.strip()
-
     env_or_key = bc.get("api_key_env_var")
     if isinstance(env_or_key, str) and env_or_key.strip():
         s = env_or_key.strip()
@@ -74,11 +76,9 @@ def _resolve_api_key(cfg: Dict[str, Any]) -> str:
         if val and val.strip():
             return val.strip()
         raise RuntimeError(f"Benchling API key env var '{s}' is not set.")
-
     val = os.getenv("BENCHLING_API_KEY")
     if val and val.strip():
         return val.strip()
-
     raise RuntimeError(
         "Benchling API key not configured. "
         "Set benchling.api_key_env_var or benchling.api_key in config.json."
@@ -93,9 +93,7 @@ def _get_client() -> Benchling:
     )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Entity creation
-# ══════════════════════════════════════════════════════════════════════════════
+# ── Entity creation ────────────────────────────────────────────────────────────
 
 def create_entry(payload: Dict[str, Any]) -> Any:
     client = _get_client()
@@ -128,10 +126,7 @@ def create_box(payload: Dict[str, Any]) -> Any:
 
 
 def create_container_direct(payload: Dict[str, Any]) -> Any:
-    """
-    Create a container via REST (camelCase keys).
-    Accepted keys: name, barcode, schemaId, parentStorageId, fields, projectId
-    """
+    """Create a container via REST. Keys: name, barcode, schemaId, parentStorageId, fields."""
     cfg     = _load_config()
     api_key = _resolve_api_key(cfg)
     base    = _rest_base_url(cfg)
@@ -141,33 +136,17 @@ def create_container_direct(payload: Dict[str, Any]) -> Any:
     raise Exception(f"Failed to create container: {resp.status_code} — {resp.text}")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Storage lookup — FIXED PageIterator iteration
-#
-# CRITICAL: PageIterator.__next__ returns List[Model] (a PAGE of items).
-# The old code did:
-#   for loc in client.locations.list(...):   <- loc was a List, not a Location
-#       if loc.name == name:                  <- always failed silently
-# This caused every run to create NEW duplicate locations and boxes.
-#
-# Correct pattern:
-#   for page in client.locations.list(...):  <- page is List[Location]
-#       for loc in page:                     <- loc is now a Location object
-#           if loc.name == name: return loc.id
-# ══════════════════════════════════════════════════════════════════════════════
+# ── Storage lookup ─────────────────────────────────────────────────────────────
+# PageIterator yields PAGES (List[Model]), not individual items.
+# Must use two-level loop: for page in .list(): for item in page:
 
 def find_location_by_name(name: str, schema_id: str) -> Optional[str]:
-    """
-    Find an existing location by name and schema ID.
-    Uses name= filter so only matching records are fetched.
-    Iterates PageIterator correctly (each page is a List[Location]).
-    """
     if not name:
         return None
     client = _get_client()
     try:
         for page in client.locations.list(name=name, schema_id=schema_id):
-            for loc in page:          # page = List[Location]
+            for loc in page:
                 if getattr(loc, "name", None) == name:
                     return loc.id
     except Exception as e:
@@ -176,16 +155,12 @@ def find_location_by_name(name: str, schema_id: str) -> Optional[str]:
 
 
 def find_box_by_name(name: str, schema_id: str) -> Optional[str]:
-    """
-    Find an existing box by name and schema ID.
-    Iterates PageIterator correctly (each page is a List[Box]).
-    """
     if not name:
         return None
     client = _get_client()
     try:
         for page in client.boxes.list(name=name, schema_id=schema_id):
-            for box in page:          # page = List[Box]
+            for box in page:
                 if getattr(box, "name", None) == name:
                     return box.id
     except Exception as e:
@@ -198,69 +173,38 @@ def find_storage_by_name(name: str, schema_id: str) -> Optional[str]:
     return find_location_by_name(name, schema_id) or find_box_by_name(name, schema_id)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Container transfer — FIXED: correct SDK method
-#
-# The correct SDK method is:
-#   client.containers.transfer_into_container(
-#       destination_container_id = container_id,
-#       transfer_request = ContainerTransfer(
-#           destination_contents = [ContainerTransferDestinationContentsItem(entity_id=...)],
-#           source_entity_id     = entity_id,
-#       )
-#   )
-#
-# This makes the sample entity appear in:
-#   - The container's "Contents" section (shows sample name)
-#   - The sample's "Inventory" tab in Benchling (shows the container)
-# ══════════════════════════════════════════════════════════════════════════════
+# ── Container transfer ─────────────────────────────────────────────────────────
 
 def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -> Any:
-    from benchling_api_client.v2.stable.models.container_transfer import ContainerTransfer
-    from benchling_api_client.v2.stable.models.container_transfer_destination_contents_item import (
-        ContainerTransferDestinationContentsItem,
-    )
-    from benchling_api_client.v2.stable.models.measurement import Measurement
-    from benchling_api_client.v2.types import UNSET
+    """
+    Transfer a sample entity into a container using the Benchling SDK.
 
+    Rules confirmed from Benchling API validation:
+      - transferQuantity is REQUIRED (use mass unit e.g. mg)
+      - concentration on dest_item must use molar units (M, nM, uM, mM)
+        Molar units only — omitting concentration avoids validation errors
+      - source_entity_id = sample entity (bfi_xxx)
+      - This links sample to container, making it appear in Sample Inventory tab
+    """
     contents = snippet.get("contents", [])
     if not contents:
         return {}
 
-    item      = contents[0]
-    entity_id = item.get("entityId")
+    entity_id = contents[0].get("entityId")
     if not entity_id:
         raise ValueError("entityId is required for container transfer")
 
-    # Build optional concentration measurement
-    conc_data = item.get("concentration")
-    conc_obj  = UNSET
-    if conc_data and isinstance(conc_data, dict):
-        try:
-            conc_obj = Measurement(
-                value=float(conc_data.get("value", 0.0)),
-                units=conc_data.get("units", "mg/mL"),
-            )
-        except Exception:
-            pass
+    # dest_item: entity_id only — concentration omitted (Benchling rejects non-molar units)
+    dest_item = ContainerTransferDestinationContentsItem(entity_id=entity_id)
 
-    dest_item = ContainerTransferDestinationContentsItem(
-        entity_id=entity_id,
-        **({"concentration": conc_obj} if conc_obj is not UNSET else {}),
-    )
-
-
-    # transferQuantity is REQUIRED by Benchling API
-
-    transfer_qty = ContainerQuantity(
-        value=1.0,
-        units=ContainerQuantityUnits("mg"),
-    )
-
+    # Build transfer — transferQuantity is REQUIRED by Benchling
     transfer = ContainerTransfer(
         destination_contents=[dest_item],
         source_entity_id=entity_id,
-        transfer_quantity=transfer_qty,
+        transfer_quantity=ContainerQuantity(
+            value=1.0,
+            units=ContainerQuantityUnits("mg"),
+        ),
     )
 
     client = _get_client()
@@ -271,9 +215,7 @@ def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -
     return {"status": "ok"}
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Entry / results helpers
-# ══════════════════════════════════════════════════════════════════════════════
+# ── Entry / results helpers ────────────────────────────────────────────────────
 
 def get_entry_details(entry_id: str) -> Dict[str, Any]:
     client = _get_client()
@@ -310,9 +252,7 @@ def create_assay_results_bulk(payload: Dict[str, Any]) -> Dict[str, Any]:
     return resp.json()
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Upsert / search helpers
-# ══════════════════════════════════════════════════════════════════════════════
+# ── Upsert / search helpers ────────────────────────────────────────────────────
 
 def upsert_dna_sequence(entity_registry_id: str, payload: Dict[str, Any]) -> Any:
     client = _get_client()

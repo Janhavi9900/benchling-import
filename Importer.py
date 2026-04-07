@@ -1,23 +1,22 @@
 """
-Importer.py  —  Benchling ingestion pipeline  (FINAL)
-======================================================
-Confirmed schema types from Benchling API errors + ERD:
-  ts_JB4gsaH8D4   = DNA Sequence schema  → create_dna_sequence() + bases field
-  ts_bi9do6KL1Z   = Custom Entity (Sample) → create_custom_entity()
-  assaysch_*      = Assay Result           → create_assay_results_bulk()
-  consch_*        = Container              → create_container_direct()
+Importer.py  —  Benchling ingestion pipeline
+=============================================
+Schema types confirmed from Benchling API:
+  ts_JB4gsaH8D4        = DNA Sequence schema  → create_dna_sequence()
+  ts_bi9do6KL1Z        = Custom Entity (Sample) → create_custom_entity()
+  assaysch_cETPFdfLCJ  = Assay Result → create_assay_results_bulk()
+  consch_Gt7eLA5MZd    = Container (SV Test Tubes)
+  locsch_285RvBkf5p    = Location
+  boxsch_uZ1ZkIuFY3    = Box
 
-Key rules:
-  - DNA entity name  = Sample_Name (e.g. ADC-Sample-1), NOT Construct_Name
-  - Sample name      = Sample_Name
-  - Entity linked    = DNA sequence ID (dna_sequence_link field)
-  - Inventory linked = sample entity ID (transfer)
-  - Results linked   = sample entity ID (linked_sample field)
-  - schemaId always set on assay results (required by Benchling)
-  - Empty Excel rows dropped before processing
-  - Folders reused if they already exist (no duplicates on re-run)
+KEY FIXES in this version:
+  - find_location_by_name / find_box_by_name used instead of find_storage_by_name
+    (PageIterator bug fixed — was creating duplicate locations/boxes every run)
+  - Transfer errors now RAISE instead of being silently swallowed
+  - Inventory section uses correct separate schema IDs for location vs box lookup
 """
 
+import datetime
 import json
 import logging
 import os
@@ -38,7 +37,8 @@ from benchling_client import (
     create_box,
     create_container_direct,
     transfer_into_container_direct,
-    find_storage_by_name,
+    find_location_by_name,
+    find_box_by_name,
 )
 from config_loader import load_config
 
@@ -55,20 +55,19 @@ logger = logging.getLogger(__name__)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SCHEMA IDs  — fallback when selected_schemas.json is missing
-# These are confirmed from your Benchling tenant ERD + API responses
+# FALLBACK SCHEMA IDs — used when selected_schemas.json is missing
 # ══════════════════════════════════════════════════════════════════════════════
 _SCHEMAS = {
-    "sample":         "ts_bi9do6KL1Z",        # Custom Entity — Sample
-    "dna":            "ts_JB4gsaH8D4",        # DNA Sequence  — DNA_Sequence_POC
-    "results":        "assaysch_cETPFdfLCJ",  # Assay Result  — Results-Demo
-    "inventory":      "consch_Gt7eLA5MZd",    # Container     — SV Test Tubes
+    "sample":         "ts_bi9do6KL1Z",
+    "dna":            "ts_JB4gsaH8D4",
+    "results":        "assaysch_cETPFdfLCJ",
+    "inventory":      "consch_Gt7eLA5MZd",
     "location":       "locsch_285RvBkf5p",
     "box":            "boxsch_uZ1ZkIuFY3",
     "entry_template": "tmpl_4fdaFvrFMZ",
 }
 
-# Fields that are set at runtime or represent folder structure — never sent as field values
+# Fields handled at runtime or via folder structure — never sent as Benchling field values
 _SKIP_FIELDS = {
     "entity linked", "entity_linked", "linked_sample",
     "cro", "folderid", "projectid",
@@ -118,12 +117,12 @@ def load_approved_mapping():
 
 
 def resolve_schema(key):
-    """Return schema ID: user selection (Step 3 UI) → hardcoded fallback."""
+    """User selection from Step 3 UI → fallback to hardcoded IDs."""
     sel_path = "ai/selected_schemas.json"
     if os.path.exists(sel_path):
         with open(sel_path) as f:
             sel = json.load(f)
-        s = sel.get(key, {})
+        s   = sel.get(key, {})
         sid = s.get("id") or s.get("schema", {}).get("id")
         if sid:
             return sid
@@ -139,7 +138,7 @@ def _api_creds():
 
 
 def find_existing_folder(name, parent_id):
-    """Prevent duplicate folder creation on re-runs."""
+    """Return existing folder ID to prevent duplicates on re-run."""
     try:
         key, base = _api_creds()
         r = _requests.get(f"{base}/folders", auth=(key, ""), timeout=15)
@@ -153,7 +152,7 @@ def find_existing_folder(name, parent_id):
 
 
 def get_project_id_for_folder(folder_id):
-    """Return the projectId for a folder — required for assay results."""
+    """Return projectId for a folder — required for assay results."""
     try:
         key, base = _api_creds()
         r = _requests.get(f"{base}/folders/{folder_id}", auth=(key, ""), timeout=15)
@@ -174,7 +173,7 @@ def _id(obj):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _coerce(raw, btype="text"):
-    """Convert raw Excel value to the type Benchling expects."""
+    """Convert raw Excel value to the type Benchling expects for this field."""
     if isinstance(raw, pd.Timestamp):
         return raw.date().isoformat()
     try:
@@ -199,14 +198,13 @@ def _coerce(raw, btype="text"):
             return None
     if btype == "date":
         return str(raw).strip() if raw else None
-    # fallback
     if isinstance(raw, float) and raw == int(raw):
         return int(raw)
     return raw
 
 
 def build_fields(schema_key, mapping, row):
-    """{ FieldName: {value: typed_value} } from approved_mapping + data row."""
+    """Build { FieldName: {value: typed_value} } from approved_mapping + data row."""
     out = {}
     for entry in mapping.get(schema_key, []):
         bf    = entry.get("benchling_field", "")
@@ -224,10 +222,10 @@ def build_fields(schema_key, mapping, row):
         if val is None:
             continue
         if btype == "integer" and not isinstance(val, int):
-            logger.warning(f"  Skip '{bf}': '{val}' not integer")
+            logger.warning(f"  Skip '{bf}': '{val}' not valid integer")
             continue
         if btype == "float" and not isinstance(val, (int, float)):
-            logger.warning(f"  Skip '{bf}': '{val}' not float")
+            logger.warning(f"  Skip '{bf}': '{val}' not valid float")
             continue
 
         out[bf] = {"value": val}
@@ -235,15 +233,16 @@ def build_fields(schema_key, mapping, row):
 
 
 def pos_to_well(p):
+    """Convert position to well coordinate: 1→A1, 2→A2, 13→B1"""
     try:
         i = int(str(p).strip())
-        return f"{chr(64 + ((i-1)//12 + 1))}{(i-1)%12 + 1}"
+        return f"{chr(64 + ((i - 1) // 12 + 1))}{(i - 1) % 12 + 1}"
     except Exception:
         return str(p).strip()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# MAIN
+# MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
 def main(file_path=None, mapping_file_path=None):
@@ -254,7 +253,7 @@ def main(file_path=None, mapping_file_path=None):
     mapping = load_approved_mapping()
     logger.info(f"Mapping loaded: {list(mapping.keys())}")
 
-    # Resolve all schema IDs
+    # Resolve schema IDs (user Step 3 selection → fallback hardcoded)
     sample_schema    = resolve_schema("sample")
     dna_schema       = resolve_schema("dna")
     results_schema   = resolve_schema("results")
@@ -263,8 +262,10 @@ def main(file_path=None, mapping_file_path=None):
     box_schema       = resolve_schema("box")
     entry_template   = _SCHEMAS["entry_template"]
 
-    logger.info(f"Schemas — Sample:{sample_schema} | DNA:{dna_schema} | "
-                f"Results:{results_schema} | Container:{container_schema}")
+    logger.info(
+        f"Schemas — Sample:{sample_schema} | DNA:{dna_schema} | "
+        f"Results:{results_schema} | Container:{container_schema}"
+    )
 
     # ── Load + clean data ─────────────────────────────────────────────────────
     data_file = get_data_file(mapping_file_path)
@@ -279,31 +280,32 @@ def main(file_path=None, mapping_file_path=None):
     if "Sample_ID" in df.columns:
         df = df[df["Sample_ID"].notna()]
     df = df.reset_index(drop=True)
-    logger.info(f"Data: {n} rows → {len(df)} valid rows")
+    logger.info(f"Data: {n} rows → {len(df)} valid rows after cleaning")
 
     parent_folder_id = get_selected_folder(benchling_cfg)
     unique_cros      = df["CRO-Name"].dropna().unique() if "CRO-Name" in df.columns else ["Default"]
 
     # ── 1. CRO folders ────────────────────────────────────────────────────────
     logger.info("Creating CRO folders...")
-    folder_ids:  Dict[str, str] = {}
+    folder_ids:  Dict[str, str]          = {}
     project_ids: Dict[str, Optional[str]] = {}
 
     for cro in unique_cros:
-        name     = str(cro).strip()
-        existing = find_existing_folder(name, parent_folder_id)
+        cro_str  = str(cro).strip()
+        existing = find_existing_folder(cro_str, parent_folder_id)
         if existing:
-            logger.info(f"  Reusing '{name}': {existing}")
+            logger.info(f"  Reusing folder '{cro_str}': {existing}")
             folder_ids[cro]  = existing
-            # Fetch projectId for this folder — needed for assay results
             project_ids[cro] = get_project_id_for_folder(existing)
         else:
-            obj = create_folder({"name": name, "parentFolderId": parent_folder_id})
+            obj = create_folder({"name": cro_str, "parentFolderId": parent_folder_id})
             fid = _id(obj)
-            pid = getattr(obj, "project_id", None) or (obj.get("projectId") if isinstance(obj, dict) else None)
+            pid = getattr(obj, "project_id", None) or (
+                obj.get("projectId") if isinstance(obj, dict) else None
+            )
             folder_ids[cro]  = fid
             project_ids[cro] = pid
-            logger.info(f"  Created '{name}': {fid}")
+            logger.info(f"  Created folder '{cro_str}': {fid}")
 
     # ── 2. Notebook entries (one per CRO) ─────────────────────────────────────
     logger.info("Creating notebook entries...")
@@ -322,22 +324,19 @@ def main(file_path=None, mapping_file_path=None):
         logger.info(f"  Entry '{cro}': {eid}")
 
     # ── 3. DNA sequences ──────────────────────────────────────────────────────
-    # ts_JB4gsaH8D4 IS a DNA Sequence schema (confirmed by Benchling API).
-    # Name = Sample_Name (ADC-Sample-1) so it appears correctly in the folder.
-    # Construct_Name (mAb-Construct) is stored only as a field value.
+    # ts_JB4gsaH8D4 IS a DNA Sequence schema (confirmed by Benchling API error).
+    # Name = "[SEQ] ADC-Sample-1" so it is distinct from the Sample entity
+    # in the folder view (prevents duplicate-looking entries).
     logger.info("Creating DNA sequences...")
     created_dna: List[Tuple[str, int, str]] = []
 
     for idx, row in df.iterrows():
-        cro  = str(row.get("CRO-Name", "Default")).strip() if "CRO-Name" in df.columns else "Default"
-        # Prefix with [SEQ] so DNA entities are distinct from Sample entities in the folder.
-        # Without prefix both "ADC-Sample-1" items would appear as duplicates in Benchling UI.
-        _base = str(row.get("Sample_Name") or row.get("Sample_ID") or f"DNA-{idx}").strip()
-        name  = f"[SEQ] {_base}"
+        cro   = str(row.get("CRO-Name", "Default")).strip() if "CRO-Name" in df.columns else "Default"
+        base_ = str(row.get("Sample_Name") or row.get("Sample_ID") or f"DNA-{idx}").strip()
+        name  = f"[SEQ] {base_}"
         bases = str(row["Sequence"]) if "Sequence" in row.index and pd.notna(row.get("Sequence")) else ""
 
-        fields = build_fields("DNA Sequence", mapping, row)
-
+        fields  = build_fields("DNA Sequence", mapping, row)
         payload = {
             "name":       name,
             "bases":      bases,
@@ -368,7 +367,7 @@ def main(file_path=None, mapping_file_path=None):
         name   = str(row.get("Sample_Name") or row.get("Sample_ID") or f"Sample-{idx}").strip()
         fields = build_fields("Sample", mapping, row)
 
-        # Link DNA sequence to this sample
+        # Wire Entity linked → DNA sequence created above
         if dna_id:
             fields["Entity linked"] = {"value": dna_id}
             logger.info(f"  Entity linked: {name} → {dna_id}")
@@ -392,7 +391,16 @@ def main(file_path=None, mapping_file_path=None):
             logger.error(f"  Sample error row {idx}: {e}")
             raise
 
-    # ── 5. Inventory ──────────────────────────────────────────────────────────
+    # ── 5. Inventory: Location → Box → Container → Transfer ───────────────────
+    #
+    # Each sample gets one container. The container is placed in a box inside
+    # a location. After creation, the sample entity is TRANSFERRED into the
+    # container — this is what makes it appear in the Sample's Inventory tab.
+    #
+    # FIXED: Uses find_location_by_name / find_box_by_name (separate functions
+    # with correct PageIterator iteration) instead of find_storage_by_name.
+    # Old find_storage_by_name iterated PageIterator as individual items instead
+    # of pages — so it never found existing locations/boxes, causing duplicates.
     logger.info("Creating inventory...")
     storage_cache: Dict[str, str] = {}
 
@@ -408,13 +416,13 @@ def main(file_path=None, mapping_file_path=None):
         cond         = str(row.get("Storage_Condition", "")).strip()
 
         if not loc_name or not box_name:
-            logger.warning(f"  Row {idx}: no Storage_Location/Box — skip inventory")
+            logger.warning(f"  Row {idx}: missing Storage_Location or Box — skipping inventory")
             continue
 
-        # Location
+        # Location — reuse if it already exists (correct PageIterator iteration)
         loc_key = f"loc_{loc_name}"
         if loc_key not in storage_cache:
-            loc_id = find_storage_by_name(loc_name, location_schema)
+            loc_id = find_location_by_name(loc_name, location_schema)
             if not loc_id:
                 obj    = create_location({"name": loc_name, "schemaId": location_schema})
                 loc_id = _id(obj)
@@ -424,12 +432,16 @@ def main(file_path=None, mapping_file_path=None):
             storage_cache[loc_key] = loc_id
         location_id = storage_cache[loc_key]
 
-        # Box
+        # Box — reuse if it already exists under this location
         box_key = f"box_{box_name}_{location_id}"
         if box_key not in storage_cache:
-            box_id = find_storage_by_name(box_name, box_schema)
+            box_id = find_box_by_name(box_name, box_schema)
             if not box_id:
-                obj    = create_box({"name": box_name, "schemaId": box_schema, "parentStorageId": location_id})
+                obj    = create_box({
+                    "name":            box_name,
+                    "schemaId":        box_schema,
+                    "parentStorageId": location_id,
+                })
                 box_id = _id(obj)
                 logger.info(f"  Created box: {box_name} ({box_id})")
             else:
@@ -437,34 +449,63 @@ def main(file_path=None, mapping_file_path=None):
             storage_cache[box_key] = box_id
         box_id = storage_cache[box_key]
 
-        # Container — barcode = Sample_ID, entity transferred in
+# Container — one per sample, barcode = Sample_ID
+        # Check if a container with this barcode already exists (from a previous run)
         well = pos_to_well(position)
-        try:
-            cont_result = create_container_direct({
-                "name":            cont_name,
-                "barcode":         barcode,
-                "schemaId":        container_schema,
-                "parentStorageId": f"{box_id}:{well}",
-                "fields": {
-                    "Quantity_mg":       {"value": float(qty)  if qty  else 0.0},
-                    "Concentration":     {"value": float(conc) if conc else 0.0},
-                    "Storage_Condition": {"value": cond},
-                },
-            })
-            cont_id = _id(cont_result) or cont_result.get("id")
-            logger.info(f"  Container: {cont_id} barcode:{barcode} {box_name}:{well}")
+        cont_id = None
 
+        if barcode:
+            try:
+                key, base = _api_creds()
+                r = _requests.get(
+                    f"{base}/containers",
+                    params={"barcodes": barcode},
+                    auth=(key, ""),
+                    timeout=15,
+                )
+                if r.status_code == 200:
+                    items = r.json().get("containers", [])
+                    if items:
+                        cont_id = items[0].get("id")
+                        logger.info(f"  Reusing container barcode:{barcode} → {cont_id}")
+            except Exception as e:
+                logger.warning(f"  Container barcode lookup error: {e}")
+
+        if not cont_id:
+            try:
+                cont_result = create_container_direct({
+                    "name":            cont_name,
+                    "barcode":         barcode,
+                    "schemaId":        container_schema,
+                    "parentStorageId": f"{box_id}:{well}",
+                    "fields": {
+                        "Quantity_mg":       {"value": float(qty)  if qty  else 0.0},
+                        "Concentration":     {"value": float(conc) if conc else 0.0},
+                        "Storage_Condition": {"value": cond},
+                    },
+                })
+                cont_id = _id(cont_result) or cont_result.get("id")
+                logger.info(f"  Container created: {cont_id} | barcode:{barcode} | {box_name}:{well}")
+            except Exception as e:
+                logger.error(f"  Container creation FAILED row {idx}: {e}")
+                raise
+
+        # Transfer sample entity into container
+        # This makes it appear in the Sample's Inventory tab
+        try:
             transfer_into_container_direct(cont_id, {
                 "contents": [{
                     "entityId":      entity_id,
-                    "concentration": {"value": float(conc) if conc else 0.0, "units": "mg/mL"},
+                    "concentration": {
+                        "value": float(conc) if conc else 0.0,
+                        "units": "mg/mL",
+                    },
                 }]
             })
-            logger.info(f"  Transferred sample {entity_id} → {cont_id}")
-
+            logger.info(f"  Transferred sample {entity_id} → container {cont_id}")
         except Exception as e:
-            logger.warning(f"  Inventory error row {idx}: {e}")
-
+            logger.error(f"  Transfer FAILED row {idx}: {e}")
+            raise
     # ── 6. Assay results ──────────────────────────────────────────────────────
     logger.info("Uploading assay results...")
 
@@ -488,10 +529,10 @@ def main(file_path=None, mapping_file_path=None):
             })
 
         if not rows_results:
-            logger.warning(f"  No results for '{cro}'")
+            logger.warning(f"  No results for '{cro}' — skipping")
             continue
 
-        # Get tableId from entry for notebook display
+        # Get tableId from the notebook entry (links results into notebook view)
         table_id = None
         if cro in entry_ids:
             try:
@@ -505,15 +546,14 @@ def main(file_path=None, mapping_file_path=None):
 
         try:
             resp = create_assay_results_bulk(payload)
-            logger.info(f"  Results for '{cro}': {resp}")
+            logger.info(f"  Results uploaded for '{cro}': {resp}")
         except Exception as e:
-            logger.error(f"  Results error '{cro}': {e}")
+            logger.error(f"  Results FAILED for '{cro}': {e}")
             raise
 
     logger.info("Pipeline complete!")
 
-    # ── Write report file for the UI Report step ──────────────────────────────
-    import datetime
+    # ── Write report file for UI Report step ──────────────────────────────────
     os.makedirs("reports", exist_ok=True)
     ts          = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     report_path = f"reports/pipeline_run_{ts}.txt"

@@ -176,6 +176,65 @@ def find_storage_by_name(name: str, schema_id: str) -> Optional[str]:
 # ── Container transfer ─────────────────────────────────────────────────────────
 
 def transfer_into_container_direct(container_id: str, snippet: Dict[str, Any]) -> Any:
+    from benchling_api_client.v2.stable.models.container_transfer import ContainerTransfer
+    from benchling_api_client.v2.stable.models.container_transfer_destination_contents_item import (
+        ContainerTransferDestinationContentsItem,
+    )
+    from benchling_api_client.v2.stable.models.container_quantity import ContainerQuantity
+    from benchling_api_client.v2.stable.models.container_quantity_units import ContainerQuantityUnits
+
+    contents = snippet.get("contents", [])
+    if not contents:
+        return {}
+
+    entity_id = contents[0].get("entityId")
+    if not entity_id:
+        raise ValueError("entityId is required for container transfer")
+
+    # Fetch existing contents of container so we include them all
+    # Benchling requires ALL current items to be listed in destination_contents
+    cfg     = _load_config()
+    api_key = _resolve_api_key(cfg)
+    base    = _rest_base_url(cfg)
+    existing_ids = []
+    try:
+        resp = requests.get(
+            f"{base}/containers/{container_id}",
+            auth=(api_key, ""),
+            timeout=15
+        )
+        if resp.status_code == 200:
+            existing = resp.json().get("contents", [])
+            existing_ids = [
+                item.get("entity", {}).get("id")
+                for item in existing
+                if item.get("entity", {}).get("id")
+            ]
+    except Exception as e:
+        print(f"  Could not fetch existing container contents: {e}")
+
+    # Build destination contents — existing items + new entity
+    all_entity_ids = list(set(existing_ids + [entity_id]))
+    dest_items = [
+        ContainerTransferDestinationContentsItem(entity_id=eid)
+        for eid in all_entity_ids
+    ]
+
+    transfer = ContainerTransfer(
+        destination_contents=dest_items,
+        source_entity_id=entity_id,
+        transfer_quantity=ContainerQuantity(
+            value=1.0,
+            units=ContainerQuantityUnits("mg"),
+        ),
+    )
+
+    client = _get_client()
+    client.containers.transfer_into_container(
+        destination_container_id=container_id,
+        transfer_request=transfer,
+    )
+    return {"status": "ok"}
     """
     Transfer a sample entity into a container using the Benchling SDK.
 

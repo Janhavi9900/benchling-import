@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 
 const API = "http://localhost:8000";
-const WS  = `ws://${window.location.host}`;
+const WS  = "ws://localhost:8000";
 
 const C = {
   bg:"#05050f",

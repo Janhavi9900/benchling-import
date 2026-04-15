@@ -1,0 +1,120 @@
+{
+  "vendor": "Sigma",
+  "range" : >3.76
+  "compounds": [
+    {
+      "id": "PFI_7425",
+      "smiles": "O=C1NCC(=O)N2C=CC=C2C1",
+      "mol_wt": 700,
+      "hydrophobicity": 3.2164,
+      "unit": g
+      "giprct" : 67.5
+      "payload": "MMAE",
+      "class": "Auristatin"
+    },
+    {
+      "id": "PF_296247",
+      "smiles": "CCC(C)C[C@H](NC(=O)[C@H](NC(=O)OC(C)(C)C)C(C)C)C(=O)N[C@@H](C)C(=O)N[C@@H](CC(C)C)C(=O)N",
+      "mol_wt": 701,
+      "hydrophobicity": 2.8766,
+      "unit": mg
+      "payload": "DM1",
+      "class": "Maytansinoid"
+    },
+    {
+      "id": "PF_29624",
+      "smiles": "CCC(C)C[C@H](NC(=O)[C@H](NC(=O)O)C(C)C)C(=O)N[C@@H](C)C(=O)N[C@@H](CC(C)C)C(=O)N",
+      "mol_wt": 702,
+      "hydrophobicity": 4.1535,
+      "unit": mg
+      "giprct" : 6
+      "payload": "MMAE",
+      "class": "Maytansinoid"
+    },
+    {
+      "id": "PFI_234",
+      "smiles": "CC1=C(C(=O)NC(C)C)C(=O)C=C(NC(=O)OC(C)(C)C)C1",
+      "mol_wt": 703,
+      "hydrophobicity": 3.766,
+      "unit": mg
+      "giprct" : .5
+      "payload": "DM1",
+      "class": "Auristatin"
+    },
+    {
+      "id": "ZID_34",
+      "smiles": "CCC1=CC(=O)NC(=O)C=C1NC(=O)C(C)NC(=O)OC(C)(C)C",
+      "mol_wt": 704,
+      "hydrophobicity": 4.0256,
+      "unit": mg
+      "payload": "MMAE",
+      "class": "Maytansinoid"
+    },
+    {
+      "id": "ZID_2",
+      "smiles": "CCC1=CC(=O)NC(=O)C=C1NC(=O)C(C)NC(=O)OC(C)(C)CCl",
+      "mol_wt": 705,
+      "hydrophobicity": 1.9534,
+      "unit": mg
+      "giprct" : 5.64
+      "payload": "DM1",
+      "class": "Maytansinoid"
+    },
+    {
+      "id": "IPF_786",
+      "smiles": "CC1OC(CO)C(O)C(O)C1OCC2=CC=CC=C2",
+      "mol_wt": 706,
+      "hydrophobicity": 2.48442,
+      "unit": mg
+      "payload": "MMAE",
+      "class": "Auristatin"
+    },
+    {
+      "id": "Y_T_05",
+      "smiles": "CC1=CC(=O)N(C)C(=O)C2=CC=CC=C12",
+      "mol_wt": 707,
+      "hydrophobicity": 1.7222,
+      "unit": mg
+      "payload": "DM1",
+      "class": "Maytansinoid"
+    },
+    {
+      "id": "X9_45",
+      "smiles": "O=C1NCC(=O)N2C=CC=CC2=C1",
+      "mol_wt": 708,
+      "hydrophobicity": 2.6412,
+      "unit": mg
+      "giprct" : 634.1
+      "payload": "MMAE",
+      "class": "Maytansinoid"
+    },
+    {
+      "id": "DF_456",
+      "smiles": "O=C1OC2=CC=CC=C2C3=C1C=CC(=O)N3",
+      "mol_wt": 709,
+      "hydrophobicity": 91.34,
+      "unit": g
+      "giprct" : 4.1
+      "payload": "DM1",
+      "class": "Auristatin"
+    },
+    {
+      "id": "PF_34",
+      "smiles": "CC1=CC2=C(C=C1O)C(=O)OC3=C2C=CC(=O)N3",
+      "mol_wt": 710,
+      "hydrophobicity": 2.35,
+      "unit": g
+      "payload": "MMAE",
+      "class": "Maytansinoid"
+    },
+    {
+      "id": "PF_35",
+      "smiles": "O=C1OC2=CC=CC=C2C3=C1C=CC(=O)O3",
+      "mol_wt": 711,
+      "hydrophobicity": 3.54,
+      "unit": g
+      "payload": "DM1",
+      "class": "Maytansinoid"
+    }
+  ]
+}
